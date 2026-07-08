@@ -9,7 +9,7 @@ async function authHeaders(): Promise<HeadersInit> {
 }
 
 export async function apiGet<T = unknown>(path: string): Promise<T> {
-  const res = await fetch(path, { headers: { Accept: "application/json" } });
+  const res = await fetch(path, { headers: { Accept: "application/json", ...(await authHeaders()) } });
   if (!res.ok) throw new Error(`GET ${path} failed`);
   return res.json();
 }

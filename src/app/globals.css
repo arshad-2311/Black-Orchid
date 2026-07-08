@@ -45,11 +45,29 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Admin-only premium palette (scoped via .admin-root) */
+  --color-admin-bg: var(--admin-bg);
+  --color-admin-card: var(--admin-card);
+  --color-admin-elevated: var(--admin-elevated);
+  --color-admin-border: var(--admin-border);
+  --color-admin-gold: var(--admin-gold);
+  --color-admin-text: var(--admin-text);
+  --color-admin-muted: var(--admin-muted);
 }
 
 /* Luxury dark theme is the default (no light mode toggling for the public site) */
 :root {
   --radius: 0.75rem;
+
+  /* Admin premium palette — scoped to .admin-root */
+  --admin-bg: #0b0b0f;
+  --admin-card: #141418;
+  --admin-elevated: #1a1a20;
+  --admin-border: rgba(255, 255, 255, 0.08);
+  --admin-gold: #d4af37;
+  --admin-text: #f4f4f6;
+  --admin-muted: #8a8a96;
 
   /* Deep charcoal / near-black background */
   --background: oklch(0.16 0.008 264);
@@ -223,3 +241,104 @@
   outline: 2px solid oklch(0.82 0.14 84);
   outline-offset: 2px;
 }
+
+/* =========================================================
+   ADMIN PREMIUM DESIGN SYSTEM (scoped to .admin-root)
+   ========================================================= */
+.admin-root {
+  --admin-radius: 14px;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+  min-height: 100vh;
+}
+
+/* Translucent surfaces */
+.admin-surface {
+  background: var(--admin-card);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+}
+.admin-surface-elevated {
+  background: var(--admin-elevated);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -12px rgba(0, 0, 0, 0.55);
+}
+.admin-glass {
+  background: rgba(20, 20, 24, 0.72);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid var(--admin-border);
+}
+
+/* Soft shadow utilities */
+.shadow-soft { box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5); }
+.shadow-soft-lg { box-shadow: 0 2px 4px rgba(0,0,0,0.3), 0 18px 40px -14px rgba(0,0,0,0.6); }
+.shadow-gold-glow { box-shadow: 0 8px 28px -8px rgba(212, 175, 55, 0.45); }
+
+/* Premium gold (admin) */
+.admin-gold-bg { background: linear-gradient(135deg, #e6c659 0%, #d4af37 55%, #b8902a 100%); }
+.admin-gold-text {
+  background: linear-gradient(135deg, #e6c659 0%, #d4af37 55%, #b8902a 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+}
+
+/* Premium focus ring for admin inputs */
+.admin-focus:focus-within {
+  border-color: rgba(212, 175, 55, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.16);
+}
+
+/* Premium input base */
+.admin-input {
+  width: 100%;
+  height: 50px;
+  border-radius: 12px;
+  border: 1px solid var(--admin-border);
+  background: rgba(11, 11, 15, 0.6);
+  padding: 0 16px;
+  font-size: 14px;
+  color: var(--admin-text);
+  transition: border-color 200ms ease, box-shadow 200ms ease, background 200ms ease;
+  outline: none;
+}
+.admin-input::placeholder { color: rgba(138, 138, 150, 0.6); }
+.admin-input:focus { border-color: rgba(212, 175, 55, 0.6); box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.16); background: rgba(11,11,15,0.85); }
+.admin-input:disabled { opacity: 0.5; cursor: not-allowed; }
+select.admin-input option { background: #141418; color: var(--admin-text); }
+
+/* Admin label */
+.admin-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--admin-muted);
+}
+
+/* Scrollbar (admin) */
+.admin-root ::-webkit-scrollbar { width: 10px; height: 10px; }
+.admin-root ::-webkit-scrollbar-track { background: transparent; }
+.admin-root ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+.admin-root ::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.4); background-clip: padding-box; border: 2px solid transparent; }
+
+/* Subtle entrance */
+@keyframes adminFadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.admin-fade-up { animation: adminFadeUp 280ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Shimmer skeleton (admin) */
+@keyframes adminShimmer {
+  0% { background-position: -800px 0; }
+  100% { background-position: 800px 0; }
+}
+.admin-skeleton {
+  background: linear-gradient(90deg, #141418 0%, #1d1d24 50%, #141418 100%);
+  background-size: 800px 100%;
+  animation: adminShimmer 1.6s infinite linear;
+  border-radius: 10px;
+}
+

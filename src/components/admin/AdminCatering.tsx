@@ -1,82 +1,281 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, Users, Package } from "lucide-react";
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
 import type { CateringPackage } from "@/lib/types";
-import { AdminCard, AdminButton, AdminInput, AdminTextarea, Modal } from "./ui";
+import {
+  AdminCard, AdminButton, AdminInput, AdminTextarea,
+  Modal, AdminSectionTitle, ImageUploader, Skeleton, EmptyState,
+} from "./ui";
 import { toast } from "sonner";
 
+function splitFeatures(features: string): string[] {
+  return features
+    .split("|")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 export function AdminCatering() {
-  const [list, setList] = useState<CateringPackage[]>([]);
+  const [list, setList] = useState<CateringPackage[] | null>(null);
   const [modal, setModal] = useState<{ open: boolean; p: CateringPackage | null }>({ open: false, p: null });
 
+  useEffect(() => {
+    let cancelled = false;
+    apiGet<CateringPackage[]>("/api/catering")
+      .then((d) => { if (!cancelled) setList(d); })
+      .catch(() => { if (!cancelled) setList([]); });
+    return () => { cancelled = true; };
+  }, []);
+
   const load = () => apiGet<CateringPackage[]>("/api/catering").then(setList).catch(() => {});
-  useEffect(() => { load(); }, []);
+
+  const remove = (p: CateringPackage) => {
+    apiDelete(`/api/catering/${p.id}`)
+      .then(() => { toast.success("Package deleted"); load(); })
+      .catch(() => toast.error("Delete failed"));
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground">Catering Packages</h1>
-          <p className="mt-1 font-sans text-sm text-muted-foreground">{list.length} packages</p>
+      <AdminSectionTitle
+        title="Catering Packages"
+        subtitle={list ? `${list.length} packages` : "Loading packages…"}
+        action={
+          <AdminButton variant="solid" size="sm" onClick={() => setModal({ open: true, p: null })}>
+            <Plus className="h-3.5 w-3.5" /> Add Package
+          </AdminButton>
+        }
+      />
+
+      {list === null ? (
+        <div className="grid gap-4 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <AdminCard key={i} className="overflow-hidden p-0">
+              <Skeleton className="aspect-[16/10] w-full" />
+              <div className="space-y-3 p-5">
+                <Skeleton className="h-5 w-2/3 rounded-md" />
+                <Skeleton className="h-3 w-24 rounded-md" />
+                <Skeleton className="h-7 w-28 rounded-md" />
+                <Skeleton className="h-3 w-full rounded-md" />
+                <Skeleton className="h-3 w-4/5 rounded-md" />
+              </div>
+            </AdminCard>
+          ))}
         </div>
-        <AdminButton onClick={() => setModal({ open: true, p: null })}><Plus className="h-3.5 w-3.5" /> Add Package</AdminButton>
-      </div>
+      ) : list.length === 0 ? (
+        <AdminCard>
+          <EmptyState
+            title="No catering packages yet"
+            message="Create packages for private events, banquets, and corporate dinners."
+            action={
+              <AdminButton variant="solid" onClick={() => setModal({ open: true, p: null })}>
+                <Plus className="h-3.5 w-3.5" /> Add Package
+              </AdminButton>
+            }
+          />
+        </AdminCard>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-3">
+          {list.map((p) => {
+            const features = splitFeatures(p.features);
+            const visibleFeatures = features.slice(0, 4);
+            const extraCount = features.length - visibleFeatures.length;
+            return (
+              <AdminCard key={p.id} className="flex flex-col overflow-hidden p-0">
+                <div className="relative aspect-[16/10] w-full overflow-hidden bg-admin-bg">
+                  {p.image ? (
+                    <img src={p.image} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-admin-muted/30">
+                      <Package className="h-10 w-10" />
+                    </div>
+                  )}
+                </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {list.map((p) => (
-          <AdminCard key={p.id}>
-            {p.image && <img src={p.image} alt="" className="mb-3 aspect-[16/10] w-full rounded-lg object-cover" />}
-            <h3 className="font-[family-name:var(--font-playfair)] text-xl text-foreground">{p.name}</h3>
-            <p className="font-sans text-xs text-gold">{p.guests}</p>
-            <p className="mt-1 font-[family-name:var(--font-playfair)] text-2xl text-gold">${p.price}<span className="font-sans text-xs text-muted-foreground">/guest</span></p>
-            <p className="mt-2 line-clamp-2 font-sans text-xs text-muted-foreground">{p.description}</p>
-            <div className="mt-3 flex gap-1">
-              <button onClick={() => setModal({ open: true, p })} className="flex h-8 items-center gap-1 rounded-lg border border-gold/20 px-3 text-gold hover:bg-gold/10"><Pencil className="h-3.5 w-3.5" /> Edit</button>
-              <button onClick={() => { if (confirm("Delete package?")) apiDelete(`/api/catering/${p.id}`).then(load).then(() => toast.success("Deleted")); }} className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10"><Trash2 className="h-3.5 w-3.5" /></button>
-            </div>
-          </AdminCard>
-        ))}
-      </div>
+                <div className="flex flex-1 flex-col p-5">
+                  <h3 className="font-[family-name:var(--font-playfair)] text-xl font-semibold text-admin-text">{p.name}</h3>
 
-      <PModal state={modal} onClose={() => setModal({ open: false, p: null })} onSaved={() => { setModal({ open: false, p: null }); load(); }} />
+                  <div className="mt-1 flex items-center gap-1.5 font-sans text-xs text-admin-gold">
+                    <Users className="h-3.5 w-3.5" />
+                    <span>{p.guests || "—"}</span>
+                  </div>
+
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="font-[family-name:var(--font-playfair)] text-2xl font-semibold text-admin-gold">${p.price}</span>
+                    <span className="font-sans text-xs text-admin-muted">/guest</span>
+                  </div>
+
+                  {p.description && (
+                    <p className="mt-2 line-clamp-2 font-sans text-xs text-admin-muted">{p.description}</p>
+                  )}
+
+                  {features.length > 0 && (
+                    <ul className="mt-3 space-y-1.5">
+                      {visibleFeatures.map((f, i) => (
+                        <li key={i} className="flex items-start gap-2 font-sans text-xs text-admin-text/80">
+                          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                          <span className="truncate">{f}</span>
+                        </li>
+                      ))}
+                      {extraCount > 0 && (
+                        <li className="pl-5 font-sans text-xs text-admin-muted">+{extraCount} more</li>
+                      )}
+                    </ul>
+                  )}
+
+                  <div className="mt-auto flex items-center gap-1.5 border-t border-admin-border pt-4">
+                    <button
+                      onClick={() => setModal({ open: true, p })}
+                      className="flex h-9 items-center gap-1.5 rounded-lg border border-admin-gold/30 px-3 font-sans text-[11px] font-medium uppercase tracking-wider text-admin-gold transition-colors hover:bg-admin-gold/10"
+                    >
+                      <Pencil className="h-3.5 w-3.5" /> Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Delete package "${p.name}"?`)) remove(p);
+                      }}
+                      aria-label={`Delete ${p.name}`}
+                      className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg border border-red-500/30 text-red-400 transition-colors hover:bg-red-500/10"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </AdminCard>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal */}
+      {modal.open && (
+        <PackageModal
+          key={modal.p?.id ?? "new"}
+          p={modal.p}
+          onClose={() => setModal({ open: false, p: null })}
+          onSaved={() => { setModal({ open: false, p: null }); load(); }}
+        />
+      )}
     </div>
   );
 }
 
-function PModal({ state, onClose, onSaved }: { state: { open: boolean; p: CateringPackage | null }; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState({ name: "", description: "", price: "", guests: "", image: "", features: "" });
+type PackageFormState = {
+  name: string;
+  description: string;
+  price: string;
+  guests: string;
+  image: string;
+  features: string;
+};
+
+function deriveForm(p: CateringPackage | null): PackageFormState {
+  if (p) {
+    return {
+      name: p.name,
+      description: p.description,
+      price: String(p.price),
+      guests: p.guests,
+      image: p.image ?? "",
+      features: p.features,
+    };
+  }
+  return { name: "", description: "", price: "", guests: "", image: "", features: "" };
+}
+
+function PackageModal({ p, onClose, onSaved }: { p: CateringPackage | null; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState<PackageFormState>(() => deriveForm(p));
   const [saving, setSaving] = useState(false);
-  useEffect(() => {
-    if (state.p) setForm({ name: state.p.name, description: state.p.description, price: String(state.p.price), guests: state.p.guests, image: state.p.image || "", features: state.p.features });
-    else setForm({ name: "", description: "", price: "", guests: "", image: "", features: "" });
-  }, [state.p, state.open]);
+
+  const set = <K extends keyof PackageFormState>(k: K, v: PackageFormState[K]) =>
+    setForm((s) => ({ ...s, [k]: v }));
 
   const save = async () => {
+    if (!form.name.trim() || !form.price) return;
     setSaving(true);
     try {
-      const payload = { ...form, price: Number(form.price) };
-      if (state.p) await apiPatch(`/api/catering/${state.p.id}`, payload);
+      const payload = {
+        name: form.name.trim(),
+        description: form.description,
+        price: Number(form.price),
+        guests: form.guests,
+        image: form.image || null,
+        features: form.features,
+      };
+      if (p) await apiPatch(`/api/catering/${p.id}`, payload);
       else await apiPost("/api/catering", payload);
-      toast.success("Saved"); onSaved();
-    } catch { toast.error("Failed"); } finally { setSaving(false); }
+      toast.success(p ? "Package updated" : "Package created");
+      onSaved();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <Modal open={state.open} onClose={onClose} title={state.p ? "Edit Package" : "Add Package"} wide>
-      <div className="space-y-4">
-        <AdminInput label="Package Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <AdminTextarea label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
-        <div className="grid grid-cols-2 gap-3">
-          <AdminInput label="Price ($/guest)" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
-          <AdminInput label="Guests" value={form.guests} onChange={(e) => setForm({ ...form, guests: e.target.value })} placeholder="20–50 guests" />
-        </div>
-        <AdminInput label="Image URL" value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} />
-        <AdminTextarea label="Features (separate with |)" value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} rows={3} placeholder="5-course menu|Premium bar|Service staff" />
-        <div className="flex justify-end gap-2 pt-2">
+    <Modal
+      open
+      onClose={onClose}
+      title={p ? "Edit Package" : "Add Package"}
+      subtitle={p ? p.name : "Create a catering offering for private events"}
+      size="lg"
+      footer={
+        <>
           <AdminButton variant="ghost" onClick={onClose}>Cancel</AdminButton>
-          <AdminButton onClick={save} disabled={saving || !form.name || !form.price}>{saving ? "Saving…" : "Save"}</AdminButton>
+          <AdminButton variant="solid" onClick={save} disabled={saving || !form.name.trim() || !form.price}>
+            {saving ? "Saving…" : "Save Package"}
+          </AdminButton>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <AdminInput
+          label="Package Name"
+          required
+          value={form.name}
+          onChange={(e) => set("name", e.target.value)}
+          placeholder="e.g. Black Orchid Banquet"
+        />
+        <AdminTextarea
+          label="Description"
+          value={form.description}
+          onChange={(e) => set("description", e.target.value)}
+          rows={2}
+          placeholder="A short description of the package"
+        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <AdminInput
+            label="Price ($/guest)"
+            required
+            type="number"
+            step="0.01"
+            min="0"
+            value={form.price}
+            onChange={(e) => set("price", e.target.value)}
+            placeholder="0.00"
+          />
+          <AdminInput
+            label="Guests"
+            value={form.guests}
+            onChange={(e) => set("guests", e.target.value)}
+            placeholder="20–50 guests"
+          />
+        </div>
+        <ImageUploader label="Package Image" aspect="16/10" value={form.image} onChange={(v) => set("image", v)} />
+        <div>
+          <AdminTextarea
+            label="Features"
+            value={form.features}
+            onChange={(e) => set("features", e.target.value)}
+            rows={3}
+            placeholder="5-course menu|Premium bar|Service staff"
+          />
+          <p className="mt-1.5 font-sans text-xs text-admin-muted">
+            Separate features with <span className="text-admin-gold">|</span> — each becomes a checkmark on the card.
+          </p>
         </div>
       </div>
     </Modal>

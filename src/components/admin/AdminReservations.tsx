@@ -1,26 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Search, Check, X, CheckCheck, Ban, Trash2, Download, Printer } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Search, Check, X, CheckCheck, Ban, Trash2, Download, Printer,
+  ArrowUp, ArrowDown, ChevronsUpDown,
+} from "lucide-react";
 import { apiGet, apiPatch, apiDelete } from "@/lib/api";
 import type { Reservation } from "@/lib/types";
-import { AdminCard, AdminButton, StatusBadge, Modal } from "./ui";
+import {
+  AdminCard, AdminButton, AdminInput, AdminSectionTitle,
+  StatusBadge, Modal, Skeleton, EmptyState, Pagination,
+} from "./ui";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const STATUSES = ["ALL", "PENDING", "CONFIRMED", "CANCELLED", "COMPLETED"];
+const STATUSES = ["ALL", "PENDING", "CONFIRMED", "CANCELLED", "COMPLETED"] as const;
+type SortKey = "date" | "guests" | "status" | "createdAt";
+type SortDir = "asc" | "desc" | null;
+const PAGE_SIZE = 10;
 
 export function AdminReservations() {
   const [list, setList] = useState<Reservation[] | null>(null);
-  const [status, setStatus] = useState("ALL");
+  const [status, setStatus] = useState<string>("ALL");
   const [query, setQuery] = useState("");
   const [detail, setDetail] = useState<Reservation | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("createdAt");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
 
   const fetchList = (s: string) => {
     apiGet<Reservation[]>(`/api/reservations${s !== "ALL" ? `?status=${s}` : ""}`)
       .then(setList)
       .catch(() => setList([]));
   };
+
+  // Robust data fetching — cancelled flag guard, no synchronous setState in body.
   useEffect(() => {
     let cancelled = false;
     apiGet<Reservation[]>(`/api/reservations${status !== "ALL" ? `?status=${status}` : ""}`)
@@ -31,10 +47,63 @@ export function AdminReservations() {
 
   const loading = list === null;
   const safeList = list ?? [];
-  const filtered = safeList.filter((r) =>
-    !query.trim() ? true : (r.name + r.email + r.phone + r.date).toLowerCase().includes(query.toLowerCase())
-  );
 
+  // Filter
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return safeList;
+    return safeList.filter((r) =>
+      `${r.name} ${r.email} ${r.phone} ${r.date}`.toLowerCase().includes(q)
+    );
+  }, [safeList, query]);
+
+  // Sort (effective sort = sortKey/sortDir, falling back to createdAt desc when null)
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    const key: SortKey = sortDir ? sortKey : "createdAt";
+    const dir: "asc" | "desc" = sortDir ?? "desc";
+    arr.sort((a, b) => {
+      let av: string | number;
+      let bv: string | number;
+      if (key === "guests") { av = a.guests; bv = b.guests; }
+      else if (key === "date") { av = `${a.date} ${a.time}`; bv = `${b.date} ${b.time}`; }
+      else if (key === "status") { av = a.status; bv = b.status; }
+      else { av = a.createdAt; bv = b.createdAt; }
+      if (av < bv) return dir === "asc" ? -1 : 1;
+      if (av > bv) return dir === "asc" ? 1 : -1;
+      return 0;
+    });
+    return arr;
+  }, [filtered, sortKey, sortDir]);
+
+  // Pagination (client-side, 10 per page)
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const startIdx = sorted.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const endIdx = Math.min(currentPage * PAGE_SIZE, sorted.length);
+  const pageRows = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // Bulk selection
+  const allOnPageSelected = pageRows.length > 0 && pageRows.every((r) => selected.has(r.id));
+  const someOnPageSelected = pageRows.some((r) => selected.has(r.id));
+
+  const toggleSelectAll = () => {
+    const next = new Set(selected);
+    if (allOnPageSelected) pageRows.forEach((r) => next.delete(r.id));
+    else pageRows.forEach((r) => next.add(r.id));
+    setSelected(next);
+  };
+
+  const toggleRow = (id: string) => {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelected(next);
+  };
+
+  const clearSelection = () => setSelected(new Set());
+
+  // Mutations
   const update = async (id: string, s: Reservation["status"]) => {
     try {
       await apiPatch(`/api/reservations/${id}`, { status: s });
@@ -47,7 +116,6 @@ export function AdminReservations() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this reservation permanently?")) return;
     try {
       await apiDelete(`/api/reservations/${id}`);
       toast.success("Reservation deleted");
@@ -58,9 +126,32 @@ export function AdminReservations() {
     }
   };
 
+  const bulkUpdate = async (s: Reservation["status"]) => {
+    const ids = Array.from(selected);
+    let ok = 0;
+    for (const id of ids) {
+      try { await apiPatch(`/api/reservations/${id}`, { status: s }); ok++; } catch { /* skip */ }
+    }
+    toast.success(`${ok} reservation${ok !== 1 ? "s" : ""} marked ${s.toLowerCase()}`);
+    setSelected(new Set());
+    fetchList(status);
+  };
+
+  const bulkDelete = async () => {
+    const ids = Array.from(selected);
+    let ok = 0;
+    for (const id of ids) {
+      try { await apiDelete(`/api/reservations/${id}`); ok++; } catch { /* skip */ }
+    }
+    toast.success(`${ok} reservation${ok !== 1 ? "s" : ""} deleted`);
+    setSelected(new Set());
+    fetchList(status);
+  };
+
+  // CSV export (unchanged logic)
   const exportCsv = () => {
     const rows = [["Name", "Phone", "Email", "Date", "Time", "Guests", "Status", "Special"]];
-    filtered.forEach((r) => rows.push([r.name, r.phone, r.email, r.date, r.time, String(r.guests), r.status, r.special || ""]));
+    sorted.forEach((r) => rows.push([r.name, r.phone, r.email, r.date, r.time, String(r.guests), r.status, r.special || ""]));
     const csv = rows.map((r) => r.map((c) => `"${(c || "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a");
@@ -70,106 +161,332 @@ export function AdminReservations() {
     URL.revokeObjectURL(url);
   };
 
+  // Sort cycle: asc -> desc -> null (reset to createdAt desc)
+  const toggleSort = (key: SortKey) => {
+    setPage(1);
+    if (sortKey !== key || sortDir === null) {
+      setSortKey(key);
+      setSortDir("asc");
+    } else if (sortDir === "asc") {
+      setSortDir("desc");
+    } else {
+      setSortKey("createdAt");
+      setSortDir("desc");
+    }
+  };
+
+  const onStatusChange = (s: string) => {
+    setStatus(s);
+    setList(null); // show skeleton while new fetch is in flight
+    setPage(1);
+    setSelected(new Set());
+  };
+
+  const onQueryChange = (v: string) => {
+    setQuery(v);
+    setPage(1);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground">Reservations</h1>
-          <p className="mt-1 font-sans text-sm text-muted-foreground">{safeList.length} record{safeList.length !== 1 ? "s" : ""}</p>
-        </div>
-        <div className="flex gap-2">
-          <AdminButton variant="outline" onClick={exportCsv}><Download className="h-3.5 w-3.5" /> Export CSV</AdminButton>
-        </div>
-      </div>
-
-      <AdminCard>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, email, phone, date…" className="w-full rounded-lg border border-gold/20 bg-background/60 py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-gold/60 focus:outline-none" />
+      <AdminSectionTitle
+        title="Reservations"
+        subtitle={`${safeList.length} record${safeList.length !== 1 ? "s" : ""}`}
+        action={
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="w-[320px] max-w-full">
+              <AdminInput
+                icon={Search}
+                placeholder="Search name, email, phone, date…"
+                value={query}
+                onChange={(e) => onQueryChange(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-1.5">
+              {STATUSES.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => onStatusChange(s)}
+                  className={cn(
+                    "rounded-full px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-wider transition-all duration-200",
+                    status === s
+                      ? "admin-gold-bg text-black"
+                      : "border border-admin-border text-admin-muted hover:text-admin-gold"
+                  )}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            <AdminButton variant="outline" size="sm" onClick={exportCsv}>
+              <Download className="h-3.5 w-3.5" /> Export CSV
+            </AdminButton>
           </div>
-          <div className="flex gap-1.5">
-            {STATUSES.map((s) => (
-              <button key={s} onClick={() => setStatus(s)} className={cn("rounded-full px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-wider transition-all", status === s ? "bg-gold-gradient text-black" : "border border-gold/20 text-muted-foreground hover:text-gold")}>{s}</button>
-            ))}
-          </div>
-        </div>
-      </AdminCard>
+        }
+      />
 
-      <AdminCard className="p-0">
+      <AdminCard className="overflow-hidden p-0">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-gold/10 font-sans text-[10px] uppercase tracking-wider text-muted-foreground">
-                <th className="px-4 py-3">Guest</th>
-                <th className="px-4 py-3">Date / Time</th>
-                <th className="px-4 py-3">Pax</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+          <table className="w-full min-w-[880px] border-collapse text-left">
+            <thead className="sticky top-0 z-10 border-b border-admin-border bg-admin-card/95 backdrop-blur">
+              <tr className="font-sans text-[10px] uppercase tracking-wider text-admin-muted">
+                <th className="w-12 px-4 py-3.5">
+                  <Checkbox
+                    checked={allOnPageSelected}
+                    indeterminate={!allOnPageSelected && someOnPageSelected}
+                    onChange={toggleSelectAll}
+                    ariaLabel="Select all on page"
+                  />
+                </th>
+                <th className="px-4 py-3.5">Guest</th>
+                <SortHeader
+                  label="Date / Time"
+                  active={sortKey === "date" && sortDir !== null}
+                  dir={sortKey === "date" ? sortDir : null}
+                  onClick={() => toggleSort("date")}
+                />
+                <SortHeader
+                  label="Pax"
+                  center
+                  active={sortKey === "guests" && sortDir !== null}
+                  dir={sortKey === "guests" ? sortDir : null}
+                  onClick={() => toggleSort("guests")}
+                />
+                <SortHeader
+                  label="Status"
+                  active={sortKey === "status" && sortDir !== null}
+                  dir={sortKey === "status" ? sortDir : null}
+                  onClick={() => toggleSort("status")}
+                />
+                <th className="px-4 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="px-4 py-10 text-center font-sans text-sm text-muted-foreground">Loading…</td></tr>
-              ) : !filtered.length ? (
-                <tr><td colSpan={5} className="px-4 py-10 text-center font-sans text-sm text-muted-foreground">No reservations found.</td></tr>
-              ) : filtered.map((r) => (
-                <tr key={r.id} className="border-b border-gold/5 transition-colors hover:bg-gold/5">
-                  <td className="px-4 py-3">
-                    <button onClick={() => setDetail(r)} className="text-left">
-                      <p className="font-[family-name:var(--font-playfair)] text-base text-foreground hover:text-gold">{r.name}</p>
-                      <p className="font-sans text-xs text-muted-foreground">{r.phone}</p>
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 font-sans text-sm text-muted-foreground">{r.date}<br />{r.time}</td>
-                  <td className="px-4 py-3 font-sans text-sm text-foreground">{r.guests}</td>
-                  <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-1">
-                      {r.status === "PENDING" && (
-                        <button onClick={() => update(r.id, "CONFIRMED")} title="Confirm" className="flex h-8 w-8 items-center justify-center rounded-lg border border-green-500/30 text-green-400 hover:bg-green-500/10"><Check className="h-4 w-4" /></button>
-                      )}
-                      {r.status !== "CANCELLED" && r.status !== "COMPLETED" && (
-                        <button onClick={() => update(r.id, "CANCELLED")} title="Cancel" className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10"><Ban className="h-4 w-4" /></button>
-                      )}
-                      {r.status === "CONFIRMED" && (
-                        <button onClick={() => update(r.id, "COMPLETED")} title="Mark completed" className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-400/30 text-blue-300 hover:bg-blue-400/10"><CheckCheck className="h-4 w-4" /></button>
-                      )}
-                      <button onClick={() => setDetail(r)} title="View" className="flex h-8 w-8 items-center justify-center rounded-lg border border-gold/20 text-gold hover:bg-gold/10"><Search className="h-4 w-4" /></button>
-                    </div>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={`sk-${i}`} className="border-b border-admin-border/50">
+                    <td className="px-4 py-4"><Skeleton className="h-5 w-5 rounded-md" /></td>
+                    <td className="px-4 py-4">
+                      <Skeleton className="h-4 w-32 rounded" />
+                      <Skeleton className="mt-2 h-3 w-24 rounded" />
+                    </td>
+                    <td className="px-4 py-4">
+                      <Skeleton className="h-4 w-20 rounded" />
+                      <Skeleton className="mt-2 h-3 w-14 rounded" />
+                    </td>
+                    <td className="px-4 py-4"><Skeleton className="mx-auto h-5 w-8 rounded-full" /></td>
+                    <td className="px-4 py-4"><Skeleton className="h-5 w-24 rounded-full" /></td>
+                    <td className="px-4 py-4"><Skeleton className="ml-auto h-7 w-28 rounded-lg" /></td>
+                  </tr>
+                ))
+              ) : sorted.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-0">
+                    <EmptyState
+                      title="No reservations found"
+                      message="Try adjusting your search query or status filter to find what you're looking for."
+                    />
                   </td>
                 </tr>
-              ))}
+              ) : (
+                pageRows.map((r, idx) => (
+                  <tr
+                    key={r.id}
+                    onClick={() => setDetail(r)}
+                    className={cn(
+                      "cursor-pointer border-b border-admin-border/50 transition-colors duration-200",
+                      idx % 2 === 1 && "bg-white/[0.015]",
+                      "hover:bg-admin-gold/5",
+                      selected.has(r.id) && "bg-admin-gold/10 hover:bg-admin-gold/15"
+                    )}
+                  >
+                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selected.has(r.id)}
+                        onChange={() => toggleRow(r.id)}
+                        ariaLabel={`Select ${r.name}`}
+                      />
+                    </td>
+                    <td className="px-4 py-4">
+                      <p className="font-[family-name:var(--font-playfair)] text-base font-semibold text-admin-text">{r.name}</p>
+                      <p className="mt-0.5 font-sans text-xs text-admin-muted">{r.phone}</p>
+                    </td>
+                    <td className="px-4 py-4">
+                      <p className="font-sans text-sm font-medium text-admin-text">{r.date}</p>
+                      <p className="mt-0.5 font-sans text-xs text-admin-muted">{r.time}</p>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <span className="inline-flex h-7 min-w-[28px] items-center justify-center rounded-full border border-admin-border bg-white/[0.03] px-2 font-sans text-xs font-medium text-admin-text">
+                        {r.guests}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4"><StatusBadge status={r.status} /></td>
+                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
+                        {r.status === "PENDING" && (
+                          <IconAction
+                            title="Confirm"
+                            onClick={() => update(r.id, "CONFIRMED")}
+                            className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                          >
+                            <Check className="h-4 w-4" />
+                          </IconAction>
+                        )}
+                        {r.status === "CONFIRMED" && (
+                          <IconAction
+                            title="Mark completed"
+                            onClick={() => update(r.id, "COMPLETED")}
+                            className="border-sky-400/30 text-sky-300 hover:bg-sky-400/10"
+                          >
+                            <CheckCheck className="h-4 w-4" />
+                          </IconAction>
+                        )}
+                        {r.status !== "CANCELLED" && r.status !== "COMPLETED" && (
+                          <IconAction
+                            title="Cancel"
+                            onClick={() => update(r.id, "CANCELLED")}
+                            className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                          >
+                            <Ban className="h-4 w-4" />
+                          </IconAction>
+                        )}
+                        <IconAction
+                          title="View details"
+                          onClick={() => setDetail(r)}
+                          className="border-admin-gold/30 text-admin-gold hover:bg-admin-gold/10"
+                        >
+                          <Search className="h-4 w-4" />
+                        </IconAction>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </AdminCard>
 
-      <Modal open={!!detail} onClose={() => setDetail(null)} title="Reservation Details" wide>
-        {detail && (
-          <div className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Detail label="Guest" value={detail.name} />
-              <Detail label="Status" value={<StatusBadge status={detail.status} />} />
-              <Detail label="Phone" value={detail.phone} />
-              <Detail label="Email" value={detail.email} />
-              <Detail label="Date" value={detail.date} />
-              <Detail label="Time" value={detail.time} />
-              <Detail label="Guests" value={String(detail.guests)} />
-              <Detail label="Submitted" value={new Date(detail.createdAt).toLocaleString()} />
-            </div>
-            {detail.special && (
-              <div>
-                <p className="mb-1 font-sans text-[10px] uppercase tracking-wider text-gold/80">Special Requests</p>
-                <p className="rounded-lg border border-gold/10 bg-background/40 p-3 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">{detail.special}</p>
+      {/* Count + pagination */}
+      {!loading && sorted.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+          <p className="font-sans text-xs text-admin-muted">
+            Showing <span className="font-medium text-admin-text">{startIdx}</span>–
+            <span className="font-medium text-admin-text">{endIdx}</span> of{" "}
+            <span className="font-medium text-admin-text">{sorted.length}</span>
+          </p>
+          <Pagination page={currentPage} totalPages={totalPages} onPage={setPage} />
+        </div>
+      )}
+
+      {/* Floating bulk action bar */}
+      <AnimatePresence>
+        {selected.size > 0 && (
+          <motion.div
+            key="bulk-bar"
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ duration: 240, ease: [0.22, 1, 0.36, 1] }}
+            className="sticky bottom-4 z-30"
+          >
+            <div className="admin-surface-elevated flex flex-wrap items-center justify-between gap-3 px-5 py-3 shadow-soft-lg">
+              <div className="flex items-center gap-3">
+                <span className="admin-gold-bg flex h-7 min-w-[28px] items-center justify-center rounded-full px-2 font-sans text-xs font-bold text-black">
+                  {selected.size}
+                </span>
+                <span className="font-sans text-sm text-admin-text">
+                  {selected.size === 1 ? "reservation" : "reservations"} selected
+                </span>
+                <button
+                  onClick={clearSelection}
+                  className="font-sans text-xs text-admin-muted underline-offset-2 transition-colors hover:text-admin-text hover:underline"
+                >
+                  Clear
+                </button>
               </div>
-            )}
-            <div className="flex flex-wrap gap-2 border-t border-gold/10 pt-4">
-              <AdminButton variant="solid" onClick={() => update(detail.id, "CONFIRMED")}><Check className="h-3.5 w-3.5" /> Confirm</AdminButton>
-              <AdminButton variant="outline" onClick={() => update(detail.id, "COMPLETED")}><CheckCheck className="h-3.5 w-3.5" /> Complete</AdminButton>
-              <AdminButton variant="outline" onClick={() => update(detail.id, "CANCELLED")}><X className="h-3.5 w-3.5" /> Cancel</AdminButton>
-              <AdminButton variant="outline" onClick={() => window.print()}><Printer className="h-3.5 w-3.5" /> Print</AdminButton>
-              <AdminButton variant="danger" onClick={() => remove(detail.id)} className="ml-auto"><Trash2 className="h-3.5 w-3.5" /> Delete</AdminButton>
+              <div className="flex flex-wrap items-center gap-2">
+                <AdminButton variant="outline" size="sm" onClick={() => bulkUpdate("CONFIRMED")}>
+                  <Check className="h-3.5 w-3.5" /> Confirm all
+                </AdminButton>
+                <AdminButton variant="outline" size="sm" onClick={() => bulkUpdate("CANCELLED")}>
+                  <Ban className="h-3.5 w-3.5" /> Cancel all
+                </AdminButton>
+                <AdminButton
+                  variant="danger"
+                  size="sm"
+                  confirm="Delete all selected reservations permanently? This cannot be undone."
+                  onConfirm={bulkDelete}
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Delete all
+                </AdminButton>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Detail modal */}
+      <Modal
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        title="Reservation Details"
+        subtitle={detail ? `Ref · ${detail.id.slice(0, 8).toUpperCase()}` : undefined}
+        size="lg"
+        footer={
+          detail ? (
+            <>
+              <AdminButton variant="ghost" onClick={() => window.print()}>
+                <Printer className="h-3.5 w-3.5" /> Print
+              </AdminButton>
+              <div className="ml-auto flex flex-wrap gap-2">
+                <AdminButton variant="outline" onClick={() => update(detail.id, "CANCELLED")}>
+                  <X className="h-3.5 w-3.5" /> Cancel
+                </AdminButton>
+                <AdminButton variant="outline" onClick={() => update(detail.id, "COMPLETED")}>
+                  <CheckCheck className="h-3.5 w-3.5" /> Complete
+                </AdminButton>
+                <AdminButton variant="solid" onClick={() => update(detail.id, "CONFIRMED")}>
+                  <Check className="h-3.5 w-3.5" /> Confirm
+                </AdminButton>
+                <AdminButton
+                  variant="danger"
+                  confirm="Delete this reservation permanently? This cannot be undone."
+                  onConfirm={() => remove(detail.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Delete
+                </AdminButton>
+              </div>
+            </>
+          ) : null
+        }
+      >
+        {detail && (
+          <div className="space-y-5">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <DetailBox label="Guest" value={detail.name} />
+              <DetailBox label="Status" value={<StatusBadge status={detail.status} />} />
+              <DetailBox label="Phone" value={detail.phone} />
+              <DetailBox label="Email" value={detail.email || "—"} />
+              <DetailBox label="Date" value={detail.date} />
+              <DetailBox label="Time" value={detail.time} />
+              <DetailBox label="Guests" value={`${detail.guests} ${detail.guests === 1 ? "person" : "people"}`} />
+              <DetailBox label="Submitted" value={new Date(detail.createdAt).toLocaleString()} />
+            </div>
+
+            <div>
+              <p className="admin-label mb-2">Special Requests</p>
+              <div className="rounded-xl border border-admin-gold/20 bg-admin-gold/[0.04] p-4">
+                {detail.special ? (
+                  <p className="font-[family-name:var(--font-cormorant)] text-lg italic leading-relaxed text-admin-text">
+                    &ldquo;{detail.special}&rdquo;
+                  </p>
+                ) : (
+                  <p className="font-[family-name:var(--font-cormorant)] text-lg italic text-admin-muted">
+                    No special requests.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -178,11 +495,87 @@ export function AdminReservations() {
   );
 }
 
-function Detail({ label, value }: { label: string; value: React.ReactNode }) {
+/* ---------- helpers ---------- */
+
+function DetailBox({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-gold/10 bg-background/40 p-3">
-      <p className="font-sans text-[10px] uppercase tracking-wider text-gold/80">{label}</p>
-      <div className="mt-1 font-[family-name:var(--font-cormorant)] text-lg text-foreground">{value}</div>
+    <div className="rounded-xl border border-admin-border bg-white/[0.02] p-3.5">
+      <p className="admin-label">{label}</p>
+      <div className="mt-1.5 font-sans text-sm font-medium text-admin-text">{value}</div>
     </div>
+  );
+}
+
+function SortHeader({
+  label, active, dir, onClick, center,
+}: {
+  label: string; active: boolean; dir: SortDir; onClick: () => void; center?: boolean;
+}) {
+  return (
+    <th className={cn("px-4 py-3.5", center && "text-center")}>
+      <button
+        onClick={onClick}
+        className={cn(
+          "inline-flex items-center gap-1.5 font-sans text-[10px] font-semibold uppercase tracking-wider transition-colors",
+          active ? "text-admin-gold" : "text-admin-muted hover:text-admin-text"
+        )}
+      >
+        {label}
+        {active ? (
+          dir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+        ) : (
+          <ChevronsUpDown className="h-3 w-3 opacity-40" />
+        )}
+      </button>
+    </th>
+  );
+}
+
+function IconAction({
+  title, onClick, className, children,
+}: {
+  title: string; onClick: () => void; className?: string; children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      className={cn(
+        "flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-200",
+        className
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Checkbox({
+  checked, indeterminate, onChange, ariaLabel,
+}: {
+  checked: boolean; indeterminate?: boolean; onChange: () => void; ariaLabel?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={indeterminate ? "mixed" : checked}
+      aria-label={ariaLabel}
+      onClick={onChange}
+      className={cn(
+        "flex h-5 w-5 items-center justify-center rounded-md border transition-all duration-200",
+        checked || indeterminate
+          ? "admin-gold-bg border-transparent text-black"
+          : "border-admin-border text-transparent hover:border-admin-gold/50"
+      )}
+    >
+      {indeterminate ? (
+        <span className="h-0.5 w-2.5 rounded-full bg-black" />
+      ) : checked ? (
+        <Check className="h-3.5 w-3.5" strokeWidth={3} />
+      ) : null}
+    </button>
   );
 }
