@@ -1,0 +1,225 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-cormorant);
+  --font-display: var(--font-playfair);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Luxury dark theme is the default (no light mode toggling for the public site) */
+:root {
+  --radius: 0.75rem;
+
+  /* Deep charcoal / near-black background */
+  --background: oklch(0.16 0.008 264);
+  --foreground: oklch(0.96 0.012 80);
+
+  --card: oklch(0.2 0.01 264);
+  --card-foreground: oklch(0.96 0.012 80);
+
+  --popover: oklch(0.19 0.01 264);
+  --popover-foreground: oklch(0.96 0.012 80);
+
+  /* Gold as the primary accent */
+  --primary: oklch(0.82 0.14 84);
+  --primary-foreground: oklch(0.18 0.02 264);
+
+  --secondary: oklch(0.26 0.012 264);
+  --secondary-foreground: oklch(0.96 0.012 80);
+
+  --muted: oklch(0.24 0.01 264);
+  --muted-foreground: oklch(0.7 0.02 80);
+
+  --accent: oklch(0.3 0.02 264);
+  --accent-foreground: oklch(0.92 0.12 84);
+
+  --destructive: oklch(0.65 0.22 22);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.82 0.14 84);
+
+  /* Dedicated gold token */
+  --gold: oklch(0.82 0.14 84);
+  --gold-foreground: oklch(0.18 0.02 264);
+
+  --chart-1: oklch(0.82 0.14 84);
+  --chart-2: oklch(0.7 0.1 60);
+  --chart-3: oklch(0.6 0.08 40);
+  --chart-4: oklch(0.55 0.06 264);
+  --chart-5: oklch(0.75 0.12 120);
+
+  --sidebar: oklch(0.14 0.008 264);
+  --sidebar-foreground: oklch(0.96 0.012 80);
+  --sidebar-primary: oklch(0.82 0.14 84);
+  --sidebar-primary-foreground: oklch(0.18 0.02 264);
+  --sidebar-accent: oklch(0.26 0.012 264);
+  --sidebar-accent-foreground: oklch(0.96 0.012 80);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.82 0.14 84);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "cv01";
+  }
+  ::selection {
+    background-color: oklch(0.82 0.14 84 / 30%);
+    color: oklch(0.98 0.02 80);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: oklch(0.14 0.008 264);
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.35 0.04 84 / 60%);
+  border-radius: 10px;
+  border: 2px solid oklch(0.14 0.008 264);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.82 0.14 84 / 70%);
+}
+
+/* Gold gradient text utility */
+.text-gold-gradient {
+  background: linear-gradient(135deg, oklch(0.92 0.13 90) 0%, oklch(0.78 0.15 75) 50%, oklch(0.95 0.1 95) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.bg-gold-gradient {
+  background: linear-gradient(135deg, oklch(0.9 0.14 88) 0%, oklch(0.74 0.15 72) 100%);
+}
+
+/* Glass effect */
+.glass {
+  background: oklch(0.2 0.01 264 / 55%);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid oklch(1 0 0 / 8%);
+}
+
+.glass-gold {
+  background: oklch(0.82 0.14 84 / 8%);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid oklch(0.82 0.14 84 / 25%);
+}
+
+/* Thin gold divider with ornament */
+.gold-rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, oklch(0.82 0.14 84 / 70%), transparent);
+}
+
+/* Shimmer animation for loading */
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, oklch(0.2 0.01 264) 0%, oklch(0.3 0.02 264) 50%, oklch(0.2 0.01 264) 100%);
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+/* Slow zoom for hero */
+@keyframes slowZoom {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.12); }
+}
+.animate-slow-zoom {
+  animation: slowZoom 18s ease-in-out infinite alternate;
+}
+
+/* Float */
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.animate-floaty {
+  animation: floaty 4s ease-in-out infinite;
+}
+
+/* Scroll indicator bounce */
+@keyframes scrollBounce {
+  0%, 100% { transform: translateY(0); opacity: 0.4; }
+  50% { transform: translateY(10px); opacity: 1; }
+}
+.animate-scroll-bounce {
+  animation: scrollBounce 2s ease-in-out infinite;
+}
+
+/* Marquee */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Luxury focus ring */
+.focus-gold:focus-visible {
+  outline: 2px solid oklch(0.82 0.14 84);
+  outline-offset: 2px;
+}

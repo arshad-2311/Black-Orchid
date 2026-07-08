@@ -1,0 +1,135 @@
+// Prisma schema for Black Orchid luxury restaurant + CMS
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("ADMIN") // ADMIN | MANAGER | EDITOR
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MenuCategory {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  order     Int        @default(0)
+  items     MenuItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model MenuItem {
+  id          String       @id @default(cuid())
+  name        String
+  description String
+  price       Float
+  image       String?
+  categoryId  String
+  category    MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  available   Boolean      @default(true)
+  veg         Boolean      @default(false)
+  spice       Int          @default(0) // 0-3
+  featured    Boolean      @default(false)
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model GalleryImage {
+  id        String   @id @default(cuid())
+  title     String
+  url       String
+  caption   String?
+  category  String   @default("Interior") // Food | Drinks | Interior | Events | Banquet
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Reservation {
+  id            String   @id @default(cuid())
+  name          String
+  phone         String
+  email         String
+  date          String
+  time          String
+  guests        Int
+  special       String?
+  status        String   @default("PENDING") // PENDING | CONFIRMED | CANCELLED | COMPLETED
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  name      String
+  role      String?
+  photo     String?
+  rating    Int      @default(5)
+  message   String
+  featured  Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EventItem {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  date        String
+  image       String?
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CateringPackage {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  price       Float
+  image       String?
+  guests      String
+  features    String
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SiteSettings {
+  id            String   @id @default("singleton")
+  restaurantName String  @default("Black Orchid")
+  tagline       String   @default("Fine Dining & Banquet")
+  heroTitle     String   @default("An Exquisite Symphony of Flavour")
+  heroSubtitle  String   @default("Where culinary artistry meets timeless elegance")
+  aboutTitle    String   @default("Our Story")
+  aboutBody     String
+  phone         String   @default("+1 (555) 010-2024")
+  email         String   @default("reservations@blackorchid.com")
+  address       String   @default("128 Velvet Lane, Downtown District")
+  mapEmbed      String?
+  hoursWeekday  String   @default("11:00 AM – 11:00 PM")
+  hoursWeekend  String   @default("10:00 AM – 12:30 AM")
+  instagram     String   @default("https://instagram.com")
+  facebook      String   @default("https://facebook.com")
+  twitter       String   @default("https://twitter.com")
+  whatsapp      String   @default("+15550102024")
+  banquetCapacity String @default("Up to 300 guests")
+  banquetDesc   String
+  metaTitle     String   @default("Black Orchid — Fine Dining & Banquet")
+  metaDesc      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
