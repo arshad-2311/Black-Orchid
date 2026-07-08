@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { motion, useMotionValue, useSpring } from "framer-motion";
 
-/* Custom desktop cursor: gold dot + trailing ring that grows on interactive hover */
+/* Custom desktop cursor: gold dot + trailing ring that grows on interactive hover.
+   Always renders the (off-screen) divs so server and client markup match — avoids
+   hydration mismatch. The cursor-host class (which hides the native cursor) and the
+   mousemove listener are only attached on fine-pointer devices, inside the effect.
+   On touch devices, the CSS @media (pointer: coarse) rule hides these divs. */
 export function Cursor() {
-  const [enabled] = useState(() =>
-    typeof window !== "undefined" && window.matchMedia("(pointer: fine)").matches
-  );
   const [hovering, setHovering] = useState(false);
   const x = useMotionValue(-100);
   const y = useMotionValue(-100);
@@ -15,7 +16,8 @@ export function Cursor() {
   const ringY = useSpring(y, { stiffness: 350, damping: 28, mass: 0.5 });
 
   useEffect(() => {
-    if (!enabled) return;
+    // Only activate on fine-pointer (desktop) devices
+    if (!window.matchMedia("(pointer: fine)").matches) return;
     document.documentElement.classList.add("cursor-host");
 
     const move = (e: MouseEvent) => {
@@ -29,9 +31,7 @@ export function Cursor() {
       window.removeEventListener("mousemove", move);
       document.documentElement.classList.remove("cursor-host");
     };
-  }, [enabled, x, y]);
-
-  if (!enabled) return null;
+  }, [x, y]);
 
   return (
     <>
