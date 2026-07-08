@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight, ChevronDown, Star, Quote, Sparkles, Crown, ChefHat,
@@ -53,99 +53,145 @@ export function Home({ settings }: { settings: SiteSettings | null }) {
 /* ---------------- HERO ---------------- */
 function Hero({ settings }: { settings: SiteSettings | null }) {
   const { setView } = useApp();
-  const slides = IMAGES.hero;
-  const [active, setActive] = useState(0);
+  const poster = IMAGES.hero[0];
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [videoReady, setVideoReady] = useState(false);
 
+  // Respect prefers-reduced-motion: show poster only, do not autoplay video.
+  // Initialize synchronously from the media query to avoid a flash, then track changes.
+  const [reducedMotion, setReducedMotion] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
   useEffect(() => {
-    const t = setInterval(() => setActive((a) => (a + 1) % slides.length), 5500);
-    return () => clearInterval(t);
-  }, [slides.length]);
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = () => setReducedMotion(mq.matches);
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
+
+  // Lazy-attempt autoplay once the video element mounts (only if motion allowed)
+  useEffect(() => {
+    if (reducedMotion) return;
+    const v = videoRef.current;
+    if (!v) return;
+    const tryPlay = () => { v.play().catch(() => {}); };
+    if (v.readyState >= 2) tryPlay();
+    v.addEventListener("loadeddata", tryPlay, { once: true });
+    v.addEventListener("canplay", () => setVideoReady(true), { once: true });
+    return () => { v.removeEventListener("loadeddata", tryPlay); };
+  }, [reducedMotion]);
+
+  // Staggered content animation variants
+  const container = {
+    hidden: {},
+    show: { transition: { staggerChildren: 0.16, delayChildren: 0.25 } },
+  };
+  const item = {
+    hidden: { opacity: 0, y: 28 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] as const } },
+  };
 
   return (
-    <section className="relative flex min-h-[100svh] items-center justify-center overflow-hidden">
-      {/* Slides */}
-      <AnimatePresence mode="sync">
-        <motion.div
-          key={active}
-          initial={{ opacity: 0, scale: 1.05 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute inset-0"
+    <section className="relative flex h-[100svh] min-h-[100svh] w-screen items-center justify-center overflow-hidden">
+      {/* Background video (covers entire viewport, centered focal point) */}
+      {!reducedMotion && (
+        <video
+          ref={videoRef}
+          className="absolute inset-0 h-full w-full object-cover object-center"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          poster={poster}
+          disablePictureInPicture
+          controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
+          aria-hidden="true"
+          tabIndex={-1}
+          onContextMenu={(e) => e.preventDefault()}
         >
-          <img src={slides[active]} alt="" className="h-full w-full object-cover animate-slow-zoom" />
-        </motion.div>
-      </AnimatePresence>
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/50 to-background" />
-      <div className="absolute inset-0 bg-background/30" />
+          <source src="/hero-video.mp4" type="video/mp4" />
+        </video>
+      )}
 
-      {/* Content */}
-      <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
+      {/* Poster fallback shown when reduced-motion is on, or before video is ready */}
+      {(reducedMotion || !videoReady) && (
+        <div className="absolute inset-0">
+          <img
+            src={poster}
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full object-cover object-center"
+          />
+          {!reducedMotion && (
+            <div className="absolute inset-0 shimmer opacity-20" aria-hidden="true" />
+          )}
+        </div>
+      )}
+
+      {/* Dark gradient overlay for readability (~60% darkening) */}
+      <div className="absolute inset-0 bg-background/60" />
+      {/* Top & bottom fade for nav/scroll legibility */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/30 to-background" />
+      {/* Vignette around the edges */}
+      <div
+        className="absolute inset-0"
+        style={{ background: "radial-gradient(ellipse at center, transparent 35%, oklch(0.16 0.008 264 / 0.75) 100%)" }}
+      />
+
+      {/* Centered content with staggered fade-up animations */}
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="relative z-10 mx-auto max-w-4xl px-6 text-center"
+      >
+        <motion.div variants={item}>
           <Eyebrow className="mb-6">{settings?.tagline || "Fine Dining & Banquet"}</Eyebrow>
         </motion.div>
 
         <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="font-[family-name:var(--font-playfair)] text-5xl font-semibold leading-[1.05] text-foreground sm:text-7xl lg:text-8xl"
+          variants={item}
+          className="font-[family-name:var(--font-playfair)] text-5xl font-semibold leading-[1.05] text-foreground drop-shadow-[0_4px_24px_oklch(0.16_0.008_264/0.7)] sm:text-7xl lg:text-8xl"
         >
           <span className="text-gold-gradient">{settings?.heroTitle || "An Exquisite Symphony of Flavour"}</span>
         </motion.h1>
 
         <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, delay: 0.7 }}
-          className="mx-auto mt-7 max-w-xl font-[family-name:var(--font-cormorant)] text-xl italic text-muted-foreground sm:text-2xl"
+          variants={item}
+          className="mx-auto mt-7 max-w-xl font-[family-name:var(--font-cormorant)] text-xl italic text-foreground/90 drop-shadow-[0_2px_12px_oklch(0.16_0.008_264/0.6)] sm:text-2xl"
         >
           {settings?.heroSubtitle}
         </motion.p>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, delay: 0.95 }}
+          variants={item}
           className="mt-10 flex flex-wrap items-center justify-center gap-4"
         >
-          <GoldButton onClick={() => setView("reservation")}>
+          <GoldButton onClick={() => setView("reservation")} className="min-h-[44px]">
             Reserve a Table <ArrowRight className="h-4 w-4" />
           </GoldButton>
-          <GoldButton variant="outline" onClick={() => setView("menu")}>
-            View Menu
+          <GoldButton variant="outline" onClick={() => setView("menu")} className="min-h-[44px]">
+            Explore Menu
           </GoldButton>
         </motion.div>
-      </div>
+      </motion.div>
 
-      {/* Slide indicators */}
-      <div className="absolute bottom-28 left-1/2 z-10 flex -translate-x-1/2 gap-2">
-        {slides.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setActive(i)}
-            className={`h-1.5 rounded-full transition-all duration-500 ${
-              i === active ? "w-8 bg-gold" : "w-1.5 bg-foreground/40"
-            }`}
-            aria-label={`Slide ${i + 1}`}
-          />
-        ))}
-      </div>
-
-      {/* Scroll indicator */}
+      {/* Minimal animated scroll indicator */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 1.4 }}
+        transition={{ delay: 1.6, duration: 0.8 }}
         className="absolute bottom-8 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2"
       >
-        <span className="font-sans text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Scroll</span>
-        <ChevronDown className="h-4 w-4 animate-scroll-bounce text-gold" />
+        <span className="font-sans text-[10px] uppercase tracking-[0.3em] text-foreground/70">Scroll</span>
+        <span className="relative flex h-9 w-5 justify-center rounded-full border border-foreground/40">
+          <motion.span
+            animate={{ y: [0, 12, 0], opacity: [1, 0.2, 1] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+            className="mt-1.5 h-1.5 w-1 rounded-full bg-gold"
+          />
+        </span>
       </motion.div>
     </section>
   );

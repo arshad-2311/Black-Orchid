@@ -42,7 +42,9 @@ export function Navbar({ settings }: { settings: { restaurantName: string; tagli
         transition={{ duration: 0.6, ease: "easeOut" }}
         className={cn(
           "fixed inset-x-0 top-0 z-50 transition-all duration-500",
-          scrolled ? "glass border-b border-gold/10 py-3" : "bg-transparent py-5"
+          scrolled
+            ? "border-b border-gold/10 bg-background/85 py-3 backdrop-blur-xl"
+            : "bg-transparent py-5"
         )}
       >
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
