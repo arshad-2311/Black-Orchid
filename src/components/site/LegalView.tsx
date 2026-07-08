@@ -1,28 +1,47 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { Eyebrow, OrnamentDivider } from "./primitives";
+import { RevealGroup, RevealItem, RevealText } from "./motion";
 
 export function LegalView({ kind }: { kind: "privacy" | "terms" }) {
   const isPrivacy = kind === "privacy";
+  const title = isPrivacy ? "Privacy Policy" : "Terms & Conditions";
+  const lastUpdated = new Date().toLocaleDateString("en", { year: "numeric", month: "long", day: "numeric" });
+
   return (
-    <div className="pt-28">
-      <section className="py-16 text-center">
-        <div className="mx-auto max-w-3xl px-4">
-          <Eyebrow className="mb-5">Legal</Eyebrow>
-          <h1 className="font-[family-name:var(--font-playfair)] text-4xl font-semibold sm:text-6xl">
-            {isPrivacy ? "Privacy Policy" : "Terms & Conditions"}
+    <div>
+      {/* ============== CINEMATIC HEADER (no image) ============== */}
+      <section className="relative flex min-h-[55vh] items-center justify-center overflow-hidden bg-background">
+        <div className="ambient-orb" style={{ width: 440, height: 440, background: "rgba(212,175,55,0.10)", top: "12%", left: "8%" }} />
+        <div className="ambient-orb" style={{ width: 520, height: 520, background: "rgba(212,175,55,0.06)", bottom: "0%", right: "4%", animationDelay: "-5s" }} />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
+
+        <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}>
+            <Eyebrow className="mb-6 justify-center">Legal</Eyebrow>
+          </motion.div>
+          <h1 className="font-[family-name:var(--font-playfair)] text-5xl font-semibold leading-[1.04] tracking-luxe text-foreground sm:text-7xl lg:text-8xl">
+            <RevealText text={title} as="span" delay={0.2} className="inline-block text-gold-gradient" />
           </h1>
-          <OrnamentDivider className="mt-6" />
-          <p className="mt-4 font-sans text-xs uppercase tracking-[0.2em] text-muted-foreground">
-            Last updated: {new Date().toLocaleDateString("en", { year: "numeric", month: "long", day: "numeric" })}
-          </p>
+          <OrnamentDivider className="mt-8" />
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.85, duration: 0.8 }}
+            className="mt-6 font-sans text-[11px] uppercase tracking-[0.3em] text-muted-foreground"
+          >
+            Last updated: {lastUpdated}
+          </motion.p>
         </div>
       </section>
 
-      <section className="pb-20">
-        <div className="mx-auto max-w-3xl space-y-8 px-4 sm:px-6 lg:px-8">
+      {/* ============== CONTENT ============== */}
+      <section className="relative bg-background pb-28 pt-12 sm:pb-36">
+        <div className="ambient-orb pointer-events-none absolute top-24 right-[-10%]" style={{ width: 360, height: 360, background: "rgba(212,175,55,0.04)" }} />
+        <RevealGroup className="mx-auto max-w-3xl space-y-10 px-6 sm:px-10">
           {isPrivacy ? <PrivacyContent /> : <TermsContent />}
-        </div>
+        </RevealGroup>
       </section>
     </div>
   );
@@ -30,12 +49,20 @@ export function LegalView({ kind }: { kind: "privacy" | "terms" }) {
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div>
-      <h2 className="font-[family-name:var(--font-playfair)] text-2xl font-semibold text-gold">{title}</h2>
-      <div className="mt-3 space-y-3 font-[family-name:var(--font-cormorant)] text-lg leading-relaxed text-muted-foreground">
-        {children}
-      </div>
-    </div>
+    <RevealItem>
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-60px" }}
+        transition={{ duration: 0.7 }}
+        className="border-l border-gold/20 pl-6 sm:pl-8"
+      >
+        <h2 className="font-[family-name:var(--font-playfair)] text-2xl font-semibold text-gold sm:text-3xl">{title}</h2>
+        <div className="mt-4 space-y-4 font-[family-name:var(--font-cormorant)] text-lg leading-relaxed text-muted-foreground sm:text-xl">
+          {children}
+        </div>
+      </motion.div>
+    </RevealItem>
   );
 }
 
@@ -43,7 +70,7 @@ function PrivacyContent() {
   return (
     <>
       <Block title="1. Introduction">
-        <p>Black Orchid ("we", "us") is committed to protecting the privacy of our guests and website visitors. This policy explains how we collect, use, and safeguard your personal information.</p>
+        <p>Black Orchid (&ldquo;we&rdquo;, &ldquo;us&rdquo;) is committed to protecting the privacy of our guests and website visitors. This policy explains how we collect, use, and safeguard your personal information.</p>
       </Block>
       <Block title="2. Information We Collect">
         <p>When you make a reservation or contact us, we collect your name, phone number, email address, party size, and any special requests you provide. We may also collect anonymous analytics data about your visit.</p>
@@ -71,7 +98,7 @@ function TermsContent() {
         <p>Reservation requests are subject to availability and confirmation by our team. Tables are held for 15 minutes past the reserved time. Groups of 8 or more may require a deposit.</p>
       </Block>
       <Block title="2. Cancellations">
-        <p>We kindly request at least 24 hours' notice for cancellations. Late cancellations or no-shows for large parties may incur a fee as communicated at the time of booking.</p>
+        <p>We kindly request at least 24 hours&apos; notice for cancellations. Late cancellations or no-shows for large parties may incur a fee as communicated at the time of booking.</p>
       </Block>
       <Block title="3. Conduct">
         <p>Guests are expected to maintain a respectful demeanour. We reserve the right to refuse service to any individual whose conduct is disruptive to the experience of other patrons.</p>

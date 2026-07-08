@@ -8,6 +8,7 @@ import type { SiteSettings } from "@/lib/types";
 import { Navbar } from "@/components/site/Navbar";
 import { Footer } from "@/components/site/Footer";
 import { ScrollProgress, StickyReserve } from "@/components/site/Chrome";
+import { Cursor } from "@/components/site/Cursor";
 import { Loader } from "@/components/site/Loader";
 import { Home } from "@/components/site/Home";
 import { MenuView } from "@/components/site/MenuView";
@@ -38,6 +39,7 @@ export default function Page() {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <Cursor />
       <Loader />
       <ScrollProgress />
       <Navbar settings={settings} />

@@ -69,43 +69,43 @@
   --admin-text: #f4f4f6;
   --admin-muted: #8a8a96;
 
-  /* Deep charcoal / near-black background */
-  --background: oklch(0.16 0.008 264);
-  --foreground: oklch(0.96 0.012 80);
+  /* Cinematic luxury palette — reinvented */
+  --background: #0a0a0a;
+  --foreground: #f5f0e8;
 
-  --card: oklch(0.2 0.01 264);
-  --card-foreground: oklch(0.96 0.012 80);
+  --card: #131313;
+  --card-foreground: #f5f0e8;
 
-  --popover: oklch(0.19 0.01 264);
-  --popover-foreground: oklch(0.96 0.012 80);
+  --popover: #131313;
+  --popover-foreground: #f5f0e8;
 
   /* Gold as the primary accent */
-  --primary: oklch(0.82 0.14 84);
-  --primary-foreground: oklch(0.18 0.02 264);
+  --primary: #d4af37;
+  --primary-foreground: #0a0a0a;
 
-  --secondary: oklch(0.26 0.012 264);
-  --secondary-foreground: oklch(0.96 0.012 80);
+  --secondary: #1c1c1c;
+  --secondary-foreground: #f5f0e8;
 
-  --muted: oklch(0.24 0.01 264);
-  --muted-foreground: oklch(0.7 0.02 80);
+  --muted: #161616;
+  --muted-foreground: #8a8a8a;
 
-  --accent: oklch(0.3 0.02 264);
-  --accent-foreground: oklch(0.92 0.12 84);
+  --accent: #1c1c1c;
+  --accent-foreground: #d4af37;
 
   --destructive: oklch(0.65 0.22 22);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.82 0.14 84);
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.10);
+  --ring: #d4af37;
 
   /* Dedicated gold token */
-  --gold: oklch(0.82 0.14 84);
-  --gold-foreground: oklch(0.18 0.02 264);
+  --gold: #d4af37;
+  --gold-foreground: #0a0a0a;
 
-  --chart-1: oklch(0.82 0.14 84);
-  --chart-2: oklch(0.7 0.1 60);
-  --chart-3: oklch(0.6 0.08 40);
-  --chart-4: oklch(0.55 0.06 264);
-  --chart-5: oklch(0.75 0.12 120);
+  --chart-1: #d4af37;
+  --chart-2: #b8902a;
+  --chart-3: #8a8a8a;
+  --chart-4: #2a2a2a;
+  --chart-5: #5a5a5a;
 
   --sidebar: oklch(0.14 0.008 264);
   --sidebar-foreground: oklch(0.96 0.012 80);
@@ -235,6 +235,126 @@
 /* Hide scrollbar utility */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* =========================================================
+   CINEMATIC LUXURY UTILITIES (reinvented public site)
+   ========================================================= */
+
+/* Film grain overlay for cinematic texture */
+.cinematic-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.04;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Ambient floating gold orbs */
+@keyframes orbFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
+  33% { transform: translate(40px, -30px) scale(1.1); opacity: 0.7; }
+  66% { transform: translate(-30px, 20px) scale(0.95); opacity: 0.4; }
+}
+.ambient-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  pointer-events: none;
+  animation: orbFloat 14s ease-in-out infinite;
+}
+
+/* Premium glass — stronger blur, subtle gold tint */
+.glass-cinema {
+  background: rgba(19, 19, 19, 0.55);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.glass-gold-cinema {
+  background: rgba(212, 175, 55, 0.06);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(212, 175, 55, 0.22);
+}
+
+/* Gold gradient text (reinvented, warmer) */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #f0d878 0%, #d4af37 45%, #b8902a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.bg-gold-gradient {
+  background: linear-gradient(135deg, #f0d878 0%, #d4af37 50%, #b8902a 100%);
+}
+
+/* Luxury gold glow */
+.glow-gold { box-shadow: 0 0 40px -8px rgba(212, 175, 55, 0.5), 0 0 80px -20px rgba(212, 175, 55, 0.3); }
+.glow-gold-hover { transition: box-shadow 0.4s ease, transform 0.4s ease; }
+.glow-gold-hover:hover { box-shadow: 0 0 50px -6px rgba(212, 175, 55, 0.6), 0 10px 40px -10px rgba(212, 175, 55, 0.4); transform: translateY(-2px); }
+
+/* Ripple effect base */
+.ripple-container { position: relative; overflow: hidden; }
+.ripple {
+  position: absolute;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.4);
+  transform: scale(0);
+  animation: rippleAnim 0.6s ease-out;
+  pointer-events: none;
+}
+@keyframes rippleAnim {
+  to { transform: scale(4); opacity: 0; }
+}
+
+/* Text reveal mask (word-by-word) */
+.reveal-mask { overflow: hidden; display: inline-block; }
+.reveal-line { display: block; overflow: hidden; }
+
+/* Image reveal (clip from bottom) */
+.img-reveal { clip-path: inset(0 0 100% 0); transition: clip-path 1.1s cubic-bezier(0.22, 1, 0.36, 1); }
+.img-reveal.in-view { clip-path: inset(0 0 0 0); }
+
+/* Editorial letter-spacing helpers */
+.tracking-luxe { letter-spacing: 0.04em; }
+.tracking-wide-luxe { letter-spacing: 0.3em; }
+
+/* Hairline gold divider */
+.hairline-gold { height: 1px; background: linear-gradient(90deg, transparent, rgba(212,175,55,0.5), transparent); }
+
+/* Custom cursor (desktop only — hidden on touch) */
+@media (pointer: fine) {
+  .cursor-host * { cursor: none !important; }
+}
+.cursor-dot, .cursor-ring {
+  position: fixed;
+  top: 0; left: 0;
+  pointer-events: none;
+  z-index: 9999;
+  border-radius: 9999px;
+  mix-blend-mode: difference;
+}
+.cursor-dot { width: 6px; height: 6px; background: #d4af37; }
+.cursor-ring { width: 36px; height: 36px; border: 1px solid rgba(212,175,55,0.6); transition: width 0.25s ease, height 0.25s ease, background 0.25s ease, border-color 0.25s ease; }
+@media (pointer: coarse) {
+  .cursor-dot, .cursor-ring { display: none; }
+}
+
+/* Ken burns slow drift */
+@keyframes kenBurns {
+  0% { transform: scale(1.05) translate(0,0); }
+  100% { transform: scale(1.15) translate(-2%, -2%); }
+}
+.animate-ken-burns { animation: kenBurns 22s ease-in-out infinite alternate; }
+
+/* Shimmer line (for loading) */
+@keyframes shimmerLine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
 
 /* Luxury focus ring */
 .focus-gold:focus-visible {

@@ -1,123 +1,103 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
+import { Instagram, Facebook, Twitter, MapPin, Phone, Mail, Clock, ArrowUpRight, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Instagram, Facebook, Twitter, MapPin, Phone, Mail, Clock, Send, UtensilsCrossed } from "lucide-react";
 import { useApp, type ViewKey } from "@/lib/store";
 import type { SiteSettings } from "@/lib/types";
-import { OrnamentDivider } from "./primitives";
+import { toast } from "sonner";
 
 export function Footer({ settings }: { settings: SiteSettings | null }) {
   const { setView } = useApp();
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
 
   const links: { label: string; view: ViewKey }[] = [
-    { label: "About Us", view: "about" },
+    { label: "About", view: "about" },
     { label: "Menu", view: "menu" },
-    { label: "Banquet Facility", view: "banquet" },
+    { label: "Banquet", view: "banquet" },
     { label: "Gallery", view: "gallery" },
     { label: "Catering", view: "catering" },
-    { label: "Visiting Hours", view: "hours" },
-    { label: "Reserve a Table", view: "reservation" },
+    { label: "Hours", view: "hours" },
+    { label: "Reserve", view: "reservation" },
     { label: "Contact", view: "contact" },
   ];
 
-  const legal: { label: string; view: ViewKey }[] = [
-    { label: "Privacy Policy", view: "privacy" },
-    { label: "Terms & Conditions", view: "terms" },
+  const socials = [
+    { Icon: Instagram, href: settings?.instagram },
+    { Icon: Facebook, href: settings?.facebook },
+    { Icon: Twitter, href: settings?.twitter },
   ];
 
   return (
-    <footer className="mt-auto border-t border-gold/10 bg-card/40">
-      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        {/* Newsletter */}
-        <div className="mb-14 text-center">
-          <OrnamentDivider className="mb-6" />
-          <h3 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground">
-            Join the Inner Circle
-          </h3>
-          <p className="mx-auto mt-3 max-w-md font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">
-            Exclusive invitations, chef's tasting menus, and private events — delivered to your inbox.
-          </p>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (email) {
-                setSubscribed(true);
-                setEmail("");
-                setTimeout(() => setSubscribed(false), 4000);
-              }
-            }}
-            className="mx-auto mt-6 flex max-w-md items-center gap-2"
+    <footer className="mt-auto border-t border-white/[0.06] bg-[#080808]">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
+        {/* Newsletter band */}
+        <div className="grid gap-10 border-b border-white/[0.06] py-16 lg:grid-cols-2 lg:items-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.7 }}
+          >
+            <p className="font-sans text-[11px] uppercase tracking-[0.35em] text-gold/80">Inner Circle</p>
+            <h3 className="mt-4 font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-tight text-foreground sm:text-5xl">
+              An invitation to the <span className="text-gold-gradient">extraordinary</span>
+            </h3>
+          </motion.div>
+          <motion.form
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.7, delay: 0.15 }}
+            onSubmit={(e) => { e.preventDefault(); if (email) { toast.success("Welcome to the inner circle ✦"); setEmail(""); } }}
+            className="flex items-center gap-3"
           >
             <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
               placeholder="Your email address"
-              className="h-12 flex-1 rounded-full border border-gold/20 bg-background/60 px-5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-gold/60 focus:outline-none"
+              className="h-14 flex-1 rounded-full border border-white/10 bg-white/[0.03] px-6 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-gold/50 focus:outline-none transition-colors"
             />
-            <button
-              type="submit"
-              className="inline-flex h-12 items-center gap-2 rounded-full bg-gold-gradient px-6 text-sm font-semibold uppercase tracking-wider text-black transition-transform hover:-translate-y-0.5"
-            >
-              <Send className="h-4 w-4" />
-              <span className="hidden sm:inline">Subscribe</span>
+            <button type="submit" className="ripple-container relative inline-flex h-14 items-center justify-center gap-2 overflow-hidden rounded-full bg-gold-gradient px-7 font-sans text-[11px] font-semibold uppercase tracking-[0.2em] text-black glow-gold-hover">
+              <Send className="relative z-10 h-4 w-4" /><span className="relative z-10 hidden sm:inline">Subscribe</span>
             </button>
-          </form>
-          {subscribed && (
-            <p className="mt-3 text-sm text-gold">Welcome to the inner circle. Check your inbox ✦</p>
-          )}
+          </motion.form>
         </div>
 
-        <div className="grid gap-10 md:grid-cols-4">
-          {/* Brand */}
+        {/* Main footer grid */}
+        <div className="grid gap-12 py-16 md:grid-cols-4">
+          {/* Brand + socials */}
           <div className="md:col-span-1">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full border border-gold/40 text-gold">
-                <UtensilsCrossed className="h-5 w-5" />
-              </span>
-              <span className="font-[family-name:var(--font-playfair)] text-xl font-semibold">
-                {settings?.restaurantName || "Black Orchid"}
-              </span>
-            </div>
-            <p className="mt-4 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">
+            <h4 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground">
+              {settings?.restaurantName || "Black Orchid"}
+            </h4>
+            <p className="mt-3 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">
               {settings?.tagline || "Fine Dining & Banquet"}
             </p>
-            <div className="mt-5 flex gap-3">
-              {[
-                { Icon: Instagram, href: settings?.instagram },
-                { Icon: Facebook, href: settings?.facebook },
-                { Icon: Twitter, href: settings?.twitter },
-              ].map(({ Icon, href }, i) => (
-                <a
-                  key={i}
-                  href={href || "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-gold/20 text-gold/80 transition-all hover:border-gold hover:bg-gold/10 hover:text-gold"
+            <div className="mt-6 flex gap-3">
+              {socials.map(({ Icon, href }, i) => (
+                <motion.a
+                  key={i} href={href || "#"} target="_blank" rel="noopener noreferrer"
+                  whileHover={{ y: -3 }}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 text-foreground/70 transition-colors hover:border-gold/50 hover:text-gold"
                   aria-label="Social media"
                 >
                   <Icon className="h-4 w-4" />
-                </a>
+                </motion.a>
               ))}
             </div>
           </div>
 
           {/* Quick links */}
           <div>
-            <h4 className="font-sans text-xs font-semibold uppercase tracking-[0.25em] text-gold">Explore</h4>
-            <ul className="mt-5 space-y-2.5">
+            <p className="font-sans text-[10px] uppercase tracking-[0.3em] text-gold/70">Explore</p>
+            <ul className="mt-5 space-y-3">
               {links.map((l) => (
                 <li key={l.label}>
-                  <button
-                    onClick={() => setView(l.view)}
-                    className="font-[family-name:var(--font-cormorant)] text-lg text-muted-foreground transition-colors hover:text-gold"
-                  >
+                  <button onClick={() => setView(l.view)} className="group inline-flex items-center gap-1.5 font-[family-name:var(--font-cormorant)] text-lg text-muted-foreground transition-colors hover:text-gold">
                     {l.label}
+                    <ArrowUpRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
                   </button>
                 </li>
               ))}
@@ -126,65 +106,33 @@ export function Footer({ settings }: { settings: SiteSettings | null }) {
 
           {/* Contact */}
           <div>
-            <h4 className="font-sans text-xs font-semibold uppercase tracking-[0.25em] text-gold">Contact</h4>
-            <ul className="mt-5 space-y-3 text-sm text-muted-foreground">
-              <li className="flex gap-3">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold/70" />
-                <span>{settings?.address}</span>
-              </li>
-              <li className="flex gap-3">
-                <Phone className="mt-0.5 h-4 w-4 shrink-0 text-gold/70" />
-                <a href={`tel:${settings?.phone}`} className="hover:text-gold">{settings?.phone}</a>
-              </li>
-              <li className="flex gap-3">
-                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-gold/70" />
-                <a href={`mailto:${settings?.email}`} className="hover:text-gold">{settings?.email}</a>
-              </li>
+            <p className="font-sans text-[10px] uppercase tracking-[0.3em] text-gold/70">Visit</p>
+            <ul className="mt-5 space-y-4 text-sm text-muted-foreground">
+              <li className="flex gap-3"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><span>{settings?.address}</span></li>
+              <li className="flex gap-3"><Phone className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><a href={`tel:${settings?.phone}`} className="hover:text-gold">{settings?.phone}</a></li>
+              <li className="flex gap-3"><Mail className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><a href={`mailto:${settings?.email}`} className="hover:text-gold">{settings?.email}</a></li>
             </ul>
           </div>
 
           {/* Hours */}
           <div>
-            <h4 className="font-sans text-xs font-semibold uppercase tracking-[0.25em] text-gold">Hours</h4>
-            <ul className="mt-5 space-y-3 text-sm text-muted-foreground">
-              <li className="flex gap-3">
-                <Clock className="mt-0.5 h-4 w-4 shrink-0 text-gold/70" />
-                <div>
-                  <p className="text-foreground">Monday – Friday</p>
-                  <p>{settings?.hoursWeekday}</p>
-                </div>
-              </li>
-              <li className="flex gap-3">
-                <Clock className="mt-0.5 h-4 w-4 shrink-0 text-gold/70" />
-                <div>
-                  <p className="text-foreground">Saturday – Sunday</p>
-                  <p>{settings?.hoursWeekend}</p>
-                </div>
-              </li>
+            <p className="font-sans text-[10px] uppercase tracking-[0.3em] text-gold/70">Hours</p>
+            <ul className="mt-5 space-y-4 text-sm text-muted-foreground">
+              <li className="flex gap-3"><Clock className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><div><p className="text-foreground">Mon – Fri</p><p>{settings?.hoursWeekday}</p></div></li>
+              <li className="flex gap-3"><Clock className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><div><p className="text-foreground">Sat – Sun</p><p>{settings?.hoursWeekend}</p></div></li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-gold/10 pt-6 sm:flex-row">
+        {/* Bottom bar */}
+        <div className="flex flex-col items-center justify-between gap-4 border-t border-white/[0.06] py-7 sm:flex-row">
           <p className="font-sans text-xs text-muted-foreground">
-            © {new Date().getFullYear()} {settings?.restaurantName || "Black Orchid"}. All rights reserved.
+            © {new Date().getFullYear()} {settings?.restaurantName || "Black Orchid"}. Crafted with intention.
           </p>
-          <div className="flex gap-5">
-            {legal.map((l) => (
-              <button
-                key={l.label}
-                onClick={() => setView(l.view)}
-                className="font-sans text-xs text-muted-foreground transition-colors hover:text-gold"
-              >
-                {l.label}
-              </button>
-            ))}
-            <button
-              onClick={() => router.push("/admin")}
-              className="font-sans text-xs text-muted-foreground/50 transition-colors hover:text-gold"
-            >
-              Admin
-            </button>
+          <div className="flex gap-6">
+            <button onClick={() => setView("privacy")} className="font-sans text-xs text-muted-foreground transition-colors hover:text-gold">Privacy</button>
+            <button onClick={() => setView("terms")} className="font-sans text-xs text-muted-foreground transition-colors hover:text-gold">Terms</button>
+            <button onClick={() => router.push("/admin")} className="font-sans text-xs text-muted-foreground/40 transition-colors hover:text-gold">Admin</button>
           </div>
         </div>
       </div>

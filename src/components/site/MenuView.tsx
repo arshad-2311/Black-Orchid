@@ -2,11 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, X, Leaf } from "lucide-react";
 import { apiGet } from "@/lib/api";
+import { IMAGES } from "@/lib/images";
 import type { MenuCategory, MenuItem } from "@/lib/types";
-import { Eyebrow, GoldButton, OrnamentDivider, SpiceLevel, VegBadge } from "./primitives";
+import { Eyebrow, OrnamentDivider, SpiceLevel, VegBadge } from "./primitives";
+import { RevealText } from "./motion";
 import { cn } from "@/lib/utils";
+
+type Group = { category: MenuCategory; items: MenuItem[] };
 
 export function MenuView() {
   const [categories, setCategories] = useState<MenuCategory[]>([]);
@@ -18,143 +22,257 @@ export function MenuView() {
     apiGet<MenuCategory[]>("/api/menu").then(setCategories).catch(() => {});
   }, []);
 
-  const filtered = useMemo(() => {
-    let items = categories.flatMap((c) => c.items.map((i) => ({ ...i, categoryName: c.name })));
-    if (active !== "ALL") items = items.filter((i) => i.categoryId === active);
-    if (vegOnly) items = items.filter((i) => i.veg);
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      items = items.filter((i) => i.name.toLowerCase().includes(q) || i.description.toLowerCase().includes(q));
+  const groups = useMemo<Group[]>(() => {
+    const q = query.trim().toLowerCase();
+    const pass = (i: MenuItem) =>
+      (!vegOnly || i.veg) &&
+      (!q || i.name.toLowerCase().includes(q) || i.description.toLowerCase().includes(q));
+
+    if (active === "ALL") {
+      return categories
+        .map((c) => ({ category: c, items: c.items.filter(pass) }))
+        .filter((g) => g.items.length > 0);
     }
-    return items;
+    const cat = categories.find((c) => c.id === active);
+    if (!cat) return [];
+    return [{ category: cat, items: cat.items.filter(pass) }].filter((g) => g.items.length > 0);
   }, [categories, active, vegOnly, query]);
 
+  const totalShown = groups.reduce((n, g) => n + g.items.length, 0);
+
   return (
-    <div className="pt-28">
-      {/* Header */}
-      <section className="relative overflow-hidden py-16 text-center">
-        <div className="absolute inset-0 -z-10 opacity-20">
-          <img src="https://sfile.chatglm.cn/images-ppt/05d707105d1a.jpeg" alt="" className="h-full w-full object-cover" />
+    <div>
+      {/* ============== CINEMATIC HEADER ============== */}
+      <section className="relative flex min-h-[70vh] items-center justify-center overflow-hidden cinematic-grain">
+        <div className="absolute inset-0 -z-10">
+          <img src={IMAGES.food[0]} alt="" className="h-full w-full object-cover" />
         </div>
-        <div className="absolute inset-0 -z-10 bg-background/70" />
-        <div className="mx-auto max-w-3xl px-4">
-          <Eyebrow className="mb-5">À La Carte</Eyebrow>
-          <h1 className="font-[family-name:var(--font-playfair)] text-5xl font-semibold sm:text-7xl">
-            The <span className="text-gold-gradient">Menu</span>
+        <div className="absolute inset-0 bg-background/75" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background" />
+        <div
+          className="absolute inset-0"
+          style={{ background: "radial-gradient(ellipse at center, transparent 35%, rgba(10,10,10,0.85) 100%)" }}
+        />
+
+        {/* Ambient gold orbs */}
+        <div className="ambient-orb" style={{ width: 420, height: 420, background: "rgba(212,175,55,0.14)", top: "18%", left: "6%" }} />
+        <div className="ambient-orb" style={{ width: 520, height: 520, background: "rgba(212,175,55,0.08)", bottom: "4%", right: "4%", animationDelay: "-5s" }} />
+
+        <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}>
+            <Eyebrow className="mb-6 justify-center">À La Carte</Eyebrow>
+          </motion.div>
+          <h1 className="font-[family-name:var(--font-playfair)] text-6xl font-semibold leading-[1.02] tracking-luxe text-foreground drop-shadow-[0_4px_30px_rgba(10,10,10,0.6)] sm:text-7xl lg:text-8xl">
+            <RevealText text="The" as="span" delay={0.2} className="inline-block" />
+            <RevealText text="Menu" as="span" delay={0.45} className="ml-3 inline-block text-gold-gradient sm:ml-5" />
           </h1>
-          <OrnamentDivider className="mt-6" />
-          <p className="mx-auto mt-5 max-w-xl font-[family-name:var(--font-cormorant)] text-xl italic text-muted-foreground">
+          <OrnamentDivider className="mt-8" />
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.9, duration: 0.8 }}
+            className="mx-auto mt-6 max-w-xl font-[family-name:var(--font-cormorant)] text-xl italic text-foreground/85 drop-shadow-[0_2px_16px_rgba(10,10,10,0.6)] sm:text-2xl"
+          >
             A symphony of flavours, composed by our master chefs and served with quiet theatre.
-          </p>
+          </motion.p>
         </div>
       </section>
 
-      {/* Controls */}
-      <section className="sticky top-16 z-30 border-y border-gold/10 bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <div className="no-scrollbar flex gap-2 overflow-x-auto">
-            <CategoryPill active={active === "ALL"} onClick={() => setActive("ALL")}>All</CategoryPill>
-            {categories.map((c) => (
-              <CategoryPill key={c.id} active={active === c.id} onClick={() => setActive(c.id)}>
-                {c.name}
-              </CategoryPill>
-            ))}
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1 sm:flex-none">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search dishes…"
-                className="h-10 w-full rounded-full border border-gold/20 bg-card/50 pl-9 pr-8 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-gold/60 focus:outline-none sm:w-56"
-              />
-              {query && (
-                <button onClick={() => setQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-gold">
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-            <button
-              onClick={() => setVegOnly((v) => !v)}
-              className={cn(
-                "flex h-10 items-center gap-2 rounded-full border px-4 text-xs font-medium uppercase tracking-wider transition-colors",
-                vegOnly ? "border-green-500/60 bg-green-500/10 text-green-400" : "border-gold/20 text-muted-foreground hover:text-gold"
-              )}
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" /> Veg
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Items */}
-      <section className="py-14">
+      {/* ============== STICKY CONTROLS — glass + sliding gold pill ============== */}
+      <section className="sticky top-16 z-30 glass-cinema border-y border-white/[0.06]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          {filtered.length === 0 ? (
-            <p className="py-20 text-center font-[family-name:var(--font-cormorant)] text-2xl italic text-muted-foreground">
-              No dishes match your search.
-            </p>
-          ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <AnimatePresence mode="popLayout">
-                {filtered.map((item, i) => (
-                  <motion.article
-                    layout
-                    key={item.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.4, delay: (i % 6) * 0.05 }}
-                    className="group flex overflow-hidden rounded-2xl border border-gold/10 bg-card/40"
-                  >
-                    <div className="relative w-28 shrink-0 overflow-hidden sm:w-36">
-                      {item.image ? (
-                        <img src={item.image} alt={item.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                      ) : (
-                        <div className="h-full w-full bg-gradient-to-br from-card to-secondary" />
-                      )}
-                      <div className="absolute left-1.5 top-1.5">
-                        <VegBadge veg={item.veg} />
-                      </div>
-                    </div>
-                    <div className="flex flex-1 flex-col p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-[family-name:var(--font-playfair)] text-lg font-semibold leading-tight text-foreground">{item.name}</h3>
-                        <span className="shrink-0 font-[family-name:var(--font-playfair)] text-lg text-gold">${item.price}</span>
-                      </div>
-                      <p className="mt-1.5 flex-1 font-[family-name:var(--font-cormorant)] text-base italic leading-snug text-muted-foreground line-clamp-3">
-                        {item.description}
-                      </p>
-                      <div className="mt-2 flex items-center justify-between">
-                        <span className="font-sans text-[10px] uppercase tracking-wider text-gold/70">{item.categoryName}</span>
-                        <div className="flex items-center gap-2">
-                          <SpiceLevel level={item.spice} />
-                          {!item.available && <span className="font-sans text-[10px] uppercase tracking-wider text-red-400">Sold out</span>}
-                        </div>
-                      </div>
-                    </div>
-                  </motion.article>
-                ))}
-              </AnimatePresence>
+          <div className="flex flex-col gap-3 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+            <div className="no-scrollbar -mx-1 flex items-center gap-1 overflow-x-auto px-1">
+              <CategoryPill active={active === "ALL"} onClick={() => setActive("ALL")}>
+                All
+              </CategoryPill>
+              {categories.map((c) => (
+                <CategoryPill key={c.id} active={active === c.id} onClick={() => setActive(c.id)}>
+                  {c.name}
+                </CategoryPill>
+              ))}
             </div>
-          )}
+
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1 lg:w-64 lg:flex-none">
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search dishes…"
+                  className="h-11 w-full rounded-full border border-white/10 bg-card/60 pl-10 pr-9 text-sm text-foreground placeholder:text-muted-foreground/60 transition-colors focus:border-gold/50 focus:outline-none lg:w-64"
+                />
+                {query && (
+                  <button
+                    onClick={() => setQuery("")}
+                    aria-label="Clear search"
+                    className="absolute right-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center text-muted-foreground transition-colors hover:text-gold"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={() => setVegOnly((v) => !v)}
+                aria-pressed={vegOnly}
+                className={cn(
+                  "flex h-11 min-h-[44px] items-center gap-2 rounded-full border px-4 font-sans text-xs font-medium uppercase tracking-[0.2em] transition-all duration-300",
+                  vegOnly
+                    ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+                    : "border-white/10 text-muted-foreground hover:border-gold/40 hover:text-gold"
+                )}
+              >
+                <Leaf className="h-3.5 w-3.5" /> Veg
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============== ITEMS — editorial list, single column ============== */}
+      <section className="relative py-16 sm:py-24">
+        <div className="ambient-orb pointer-events-none absolute top-40 left-[-10%]" style={{ width: 360, height: 360, background: "rgba(212,175,55,0.04)" }} />
+        <div className="relative mx-auto max-w-4xl px-4 sm:px-6">
+          <AnimatePresence mode="wait">
+            {totalShown === 0 ? (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="py-32 text-center"
+              >
+                <p className="font-[family-name:var(--font-cormorant)] text-2xl italic text-muted-foreground sm:text-3xl">
+                  No dishes match your search.
+                </p>
+              </motion.div>
+            ) : (
+              <motion.div
+                key={active}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {groups.map((group, gi) => (
+                  <div key={group.category.id} className={gi > 0 ? "mt-16" : ""}>
+                    {active === "ALL" && (
+                      <div className="mb-4 flex items-center gap-5">
+                        <h2 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold tracking-luxe text-gold sm:text-4xl">
+                          {group.category.name}
+                        </h2>
+                        <span className="h-px flex-1 bg-white/[0.06]" />
+                        <span className="font-sans text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+                          {group.items.length} {group.items.length === 1 ? "dish" : "dishes"}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      {group.items.map((item, i) => (
+                        <DishRow key={item.id} item={item} categoryName={group.category.name} index={i} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </section>
     </div>
   );
 }
 
-function CategoryPill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+/* ============== DISH ROW — editorial, not a card ============== */
+function DishRow({ item, categoryName, index }: { item: MenuItem; categoryName: string; index: number }) {
+  return (
+    <motion.article
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.55, delay: Math.min(index * 0.05, 0.5), ease: [0.22, 1, 0.36, 1] }}
+      className="group relative flex gap-4 border-b border-white/[0.06] px-3 py-8 transition-colors duration-300 hover:bg-white/[0.02] sm:gap-6 sm:px-4"
+    >
+      {/* Thumbnail */}
+      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-white/[0.06] sm:h-28 sm:w-28">
+        {item.image ? (
+          <img
+            src={item.image}
+            alt={item.name}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+          />
+        ) : (
+          <div className="h-full w-full bg-gradient-to-br from-card to-secondary" />
+        )}
+        <div className="absolute left-1.5 top-1.5">
+          <VegBadge veg={item.veg} />
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <h3 className="font-[family-name:var(--font-playfair)] text-xl font-semibold leading-tight text-foreground sm:text-2xl">
+            {item.name}
+          </h3>
+          {item.featured && (
+            <span className="rounded-full border border-gold/40 bg-gold/[0.06] px-2.5 py-0.5 font-sans text-[9px] font-semibold uppercase tracking-[0.2em] text-gold">
+              Signature
+            </span>
+          )}
+          {!item.available && (
+            <span className="rounded-full border border-red-500/40 bg-red-500/[0.06] px-2.5 py-0.5 font-sans text-[9px] font-semibold uppercase tracking-[0.2em] text-red-400">
+              Sold out
+            </span>
+          )}
+        </div>
+        <p className="mt-1.5 line-clamp-2 font-[family-name:var(--font-cormorant)] text-base italic leading-snug text-muted-foreground sm:text-lg">
+          {item.description}
+        </p>
+        <div className="mt-2.5 flex items-center gap-3">
+          <span className="font-sans text-[10px] uppercase tracking-[0.25em] text-gold/60">{categoryName}</span>
+          <SpiceLevel level={item.spice} />
+        </div>
+      </div>
+
+      {/* Price */}
+      <div className="flex shrink-0 items-start pt-1 sm:items-center">
+        <span className="font-[family-name:var(--font-playfair)] text-xl font-semibold text-gold sm:text-2xl">
+          ${item.price}
+        </span>
+      </div>
+    </motion.article>
+  );
+}
+
+/* ============== CATEGORY PILL — sliding gold indicator via layoutId ============== */
+function CategoryPill({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        "whitespace-nowrap rounded-full px-4 py-2 font-sans text-xs font-medium uppercase tracking-wider transition-all",
-        active ? "bg-gold-gradient text-black" : "border border-gold/20 text-muted-foreground hover:border-gold/50 hover:text-gold"
+        "relative flex min-h-[44px] items-center whitespace-nowrap rounded-full px-5 font-sans text-xs font-medium uppercase tracking-[0.2em] transition-colors duration-300",
+        active ? "text-black" : "text-muted-foreground hover:text-gold"
       )}
     >
-      {children}
+      {active && (
+        <motion.span
+          layoutId="menu-pill-bg"
+          className="absolute inset-0 rounded-full bg-gold-gradient"
+          transition={{ type: "spring", stiffness: 400, damping: 35 }}
+        />
+      )}
+      <span className="relative z-10">{children}</span>
     </button>
   );
 }

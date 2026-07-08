@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, UtensilsCrossed } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useApp, type ViewKey } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { LuxuryButton } from "./primitives";
 
 const NAV: { label: string; view: ViewKey }[] = [
   { label: "Home", view: "home" },
@@ -23,69 +24,46 @@ export function Navbar({ settings }: { settings: { restaurantName: string; tagli
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
+    const onScroll = () => setScrolled(window.scrollY > 60);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const go = (v: ViewKey) => {
-    setView(v);
-    setOpen(false);
-  };
+  const go = (v: ViewKey) => { setView(v); setOpen(false); };
 
   return (
     <>
       <motion.header
         initial={{ y: -80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+        transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
         className={cn(
           "fixed inset-x-0 top-0 z-50 transition-all duration-500",
-          scrolled
-            ? "border-b border-gold/10 bg-background/85 py-3 backdrop-blur-xl"
-            : "bg-transparent py-5"
+          scrolled ? "glass-cinema border-b border-white/[0.06] py-4" : "bg-transparent py-7"
         )}
       >
-        <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          {/* Logo */}
-          <button
-            onClick={() => go("home")}
-            className="group flex items-center gap-3 focus-gold rounded"
-            aria-label="Go to home"
-          >
-            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-gold/40 text-gold transition-all duration-300 group-hover:rotate-12 group-hover:border-gold">
-              <UtensilsCrossed className="h-5 w-5" />
-            </span>
-            <span className="text-left leading-none">
-              <span className="block font-[family-name:var(--font-playfair)] text-xl font-semibold tracking-wide text-foreground">
-                {settings?.restaurantName || "Black Orchid"}
-              </span>
-              <span className="block font-sans text-[10px] uppercase tracking-[0.3em] text-gold/80">
-                {settings?.tagline || "Fine Dining & Banquet"}
-              </span>
+        <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
+          {/* Logo — minimal wordmark */}
+          <button onClick={() => go("home")} className="group flex items-center gap-2.5 focus-gold rounded" aria-label="Home">
+            <span className="font-[family-name:var(--font-playfair)] text-2xl font-semibold tracking-luxe text-foreground transition-colors group-hover:text-gold">
+              {settings?.restaurantName || "Black Orchid"}
             </span>
           </button>
 
-          {/* Desktop nav */}
+          {/* Desktop nav with animated underline */}
           <ul className="hidden items-center gap-1 lg:flex">
             {NAV.map((item) => (
               <li key={item.view}>
                 <button
                   onClick={() => go(item.view)}
                   className={cn(
-                    "relative px-4 py-2 font-sans text-[13px] uppercase tracking-[0.18em] transition-colors duration-300",
-                    view === item.view ? "text-gold" : "text-foreground/80 hover:text-gold"
+                    "group relative px-4 py-2 font-sans text-[12px] uppercase tracking-[0.2em] transition-colors duration-300",
+                    view === item.view ? "text-gold" : "text-foreground/70 hover:text-foreground"
                   )}
                 >
                   {item.label}
-                  {view === item.view && (
-                    <motion.span
-                      layoutId="nav-active"
-                      className="absolute inset-x-3 -bottom-0.5 h-px bg-gold"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    />
-                  )}
+                  <span className={cn("absolute inset-x-4 -bottom-0.5 h-px origin-left bg-gold transition-transform duration-400", view === item.view ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100")} />
                 </button>
               </li>
             ))}
@@ -95,13 +73,13 @@ export function Navbar({ settings }: { settings: { restaurantName: string; tagli
           <div className="flex items-center gap-3">
             <button
               onClick={() => go("reservation")}
-              className="hidden rounded-full bg-gold-gradient px-6 py-2.5 font-sans text-xs font-semibold uppercase tracking-[0.2em] text-black shadow-[0_8px_24px_-8px_oklch(0.82_0.14_84/0.6)] transition-transform duration-300 hover:-translate-y-0.5 sm:inline-flex"
+              className="ripple-container relative hidden overflow-hidden rounded-full bg-gold-gradient px-6 py-3 font-sans text-[11px] font-semibold uppercase tracking-[0.2em] text-black glow-gold-hover hover:-translate-y-0.5 sm:inline-flex"
             >
-              Reserve
+              <span className="relative z-10">Reserve</span>
             </button>
             <button
               onClick={() => setOpen((o) => !o)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gold/30 text-gold lg:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 text-foreground transition-colors hover:border-gold/50 hover:text-gold lg:hidden"
               aria-label="Toggle menu"
             >
               {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -110,43 +88,41 @@ export function Navbar({ settings }: { settings: { restaurantName: string; tagli
         </nav>
       </motion.header>
 
-      {/* Mobile drawer */}
+      {/* Luxury mobile menu — fullscreen overlay */}
       <AnimatePresence>
         {open && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 lg:hidden"
+            transition={{ duration: 0.4 }}
+            className="fixed inset-0 z-[60] lg:hidden"
           >
-            <div className="absolute inset-0 bg-background/95 backdrop-blur-xl" onClick={() => setOpen(false)} />
+            <div className="absolute inset-0 bg-background/97 backdrop-blur-2xl" onClick={() => setOpen(false)} />
+            {/* ambient orb */}
+            <div className="ambient-orb" style={{ width: 320, height: 320, background: "rgba(212,175,55,0.12)", top: "20%", right: "10%" }} />
             <motion.nav
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -20, opacity: 0 }}
-              className="relative mx-auto mt-24 flex max-w-sm flex-col gap-1 px-6"
+              initial="hidden"
+              animate="show"
+              variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.1 } } }}
+              className="relative flex h-full flex-col items-center justify-center gap-2 px-6"
             >
               {NAV.map((item, i) => (
                 <motion.button
                   key={item.view}
-                  initial={{ x: -20, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: i * 0.05 }}
+                  variants={{ hidden: { opacity: 0, y: 30 }, show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } } }}
                   onClick={() => go(item.view)}
                   className={cn(
-                    "border-b border-gold/10 py-4 text-left font-[family-name:var(--font-playfair)] text-2xl",
-                    view === item.view ? "text-gold" : "text-foreground"
+                    "font-[family-name:var(--font-playfair)] text-4xl font-medium transition-colors sm:text-5xl",
+                    view === item.view ? "text-gold-gradient" : "text-foreground/80 hover:text-gold"
                   )}
                 >
                   {item.label}
                 </motion.button>
               ))}
-              <button
-                onClick={() => go("reservation")}
-                className="mt-6 rounded-full bg-gold-gradient px-6 py-3 text-center font-sans text-sm font-semibold uppercase tracking-[0.2em] text-black"
-              >
-                Reserve a Table
-              </button>
+              <motion.div variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { delay: 0.5 } } }} className="mt-10">
+                <LuxuryButton onClick={() => go("reservation")}>Reserve a Table</LuxuryButton>
+              </motion.div>
             </motion.nav>
           </motion.div>
         )}
