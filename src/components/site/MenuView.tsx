@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Leaf } from "lucide-react";
+import { Search, X, Leaf, ChevronRight, Award } from "lucide-react";
 import { apiGet } from "@/lib/api";
 import { IMAGES } from "@/lib/images";
 import type { MenuCategory, MenuItem } from "@/lib/types";
 import { Eyebrow, OrnamentDivider, SpiceLevel, VegBadge } from "./primitives";
 import { RevealText } from "./motion";
+import { DishShowcase } from "./DishShowcase";
 import { cn } from "@/lib/utils";
 
 type Group = { category: MenuCategory; items: MenuItem[] };
@@ -17,6 +18,7 @@ export function MenuView() {
   const [active, setActive] = useState<string>("ALL");
   const [query, setQuery] = useState("");
   const [vegOnly, setVegOnly] = useState(false);
+  const [showcaseIndex, setShowcaseIndex] = useState<number | null>(null);
 
   useEffect(() => {
     apiGet<MenuCategory[]>("/api/menu").then(setCategories).catch(() => {});
@@ -38,7 +40,9 @@ export function MenuView() {
     return [{ category: cat, items: cat.items.filter(pass) }].filter((g) => g.items.length > 0);
   }, [categories, active, vegOnly, query]);
 
-  const totalShown = groups.reduce((n, g) => n + g.items.length, 0);
+  // Flat list of currently-shown dishes — used for showcase navigation
+  const flatDishes = useMemo(() => groups.flatMap((g) => g.items), [groups]);
+  const totalShown = flatDishes.length;
 
   return (
     <div>
@@ -155,44 +159,69 @@ export function MenuView() {
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
               >
-                {groups.map((group, gi) => (
-                  <div key={group.category.id} className={gi > 0 ? "mt-16" : ""}>
-                    {active === "ALL" && (
-                      <div className="mb-4 flex items-center gap-5">
-                        <h2 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold tracking-luxe text-gold sm:text-4xl">
-                          {group.category.name}
-                        </h2>
-                        <span className="h-px flex-1 bg-white/[0.06]" />
-                        <span className="font-sans text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-                          {group.items.length} {group.items.length === 1 ? "dish" : "dishes"}
-                        </span>
+                {(() => {
+                  let runningIndex = 0;
+                  return groups.map((group, gi) => {
+                    const startIdx = runningIndex;
+                    runningIndex += group.items.length;
+                    return (
+                      <div key={group.category.id} className={gi > 0 ? "mt-16" : ""}>
+                        {active === "ALL" && (
+                          <div className="mb-4 flex items-center gap-5">
+                            <h2 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold tracking-luxe text-gold sm:text-4xl">
+                              {group.category.name}
+                            </h2>
+                            <span className="h-px flex-1 bg-white/[0.06]" />
+                            <span className="font-sans text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+                              {group.items.length} {group.items.length === 1 ? "dish" : "dishes"}
+                            </span>
+                          </div>
+                        )}
+                        <div>
+                          {group.items.map((item, i) => (
+                            <DishRow
+                              key={item.id}
+                              item={item}
+                              categoryName={group.category.name}
+                              index={i}
+                              onOpen={() => setShowcaseIndex(startIdx + i)}
+                            />
+                          ))}
+                        </div>
                       </div>
-                    )}
-                    <div>
-                      {group.items.map((item, i) => (
-                        <DishRow key={item.id} item={item} categoryName={group.category.name} index={i} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                    );
+                  });
+                })()}
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </section>
+
+      {/* ============== DISH SHOWCASE MODAL ============== */}
+      {showcaseIndex !== null && flatDishes.length > 0 && (
+        <DishShowcase
+          dishes={flatDishes}
+          index={Math.min(showcaseIndex, flatDishes.length - 1)}
+          onClose={() => setShowcaseIndex(null)}
+          onNav={(dir) => setShowcaseIndex((p) => (p === null ? p : (p + dir + flatDishes.length) % flatDishes.length))}
+          onSelect={(i) => setShowcaseIndex(i)}
+        />
+      )}
     </div>
   );
 }
 
-/* ============== DISH ROW — editorial, not a card ============== */
-function DishRow({ item, categoryName, index }: { item: MenuItem; categoryName: string; index: number }) {
+/* ============== DISH ROW — editorial, clickable to open showcase ============== */
+function DishRow({ item, categoryName, index, onOpen }: { item: MenuItem; categoryName: string; index: number; onOpen: () => void }) {
   return (
-    <motion.article
+    <motion.button
       layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.55, delay: Math.min(index * 0.05, 0.5), ease: [0.22, 1, 0.36, 1] }}
-      className="group relative flex gap-4 border-b border-white/[0.06] px-3 py-8 transition-colors duration-300 hover:bg-white/[0.02] sm:gap-6 sm:px-4"
+      onClick={onOpen}
+      className="group relative flex w-full cursor-pointer gap-4 border-b border-white/[0.06] px-3 py-8 text-left transition-colors duration-300 hover:bg-white/[0.02] sm:gap-6 sm:px-4"
     >
       {/* Thumbnail */}
       <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-white/[0.06] sm:h-28 sm:w-28">
@@ -209,17 +238,27 @@ function DishRow({ item, categoryName, index }: { item: MenuItem; categoryName: 
         <div className="absolute left-1.5 top-1.5">
           <VegBadge veg={item.veg} />
         </div>
+        {item.chefRecommended && (
+          <div className="absolute bottom-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gold-gradient text-black shadow">
+            <Award className="h-3 w-3" />
+          </div>
+        )}
       </div>
 
       {/* Content */}
       <div className="flex min-w-0 flex-1 flex-col justify-center">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <h3 className="font-[family-name:var(--font-playfair)] text-xl font-semibold leading-tight text-foreground sm:text-2xl">
+          <h3 className="font-[family-name:var(--font-playfair)] text-xl font-semibold leading-tight text-foreground transition-colors group-hover:text-gold sm:text-2xl">
             {item.name}
           </h3>
           {item.featured && (
             <span className="rounded-full border border-gold/40 bg-gold/[0.06] px-2.5 py-0.5 font-sans text-[9px] font-semibold uppercase tracking-[0.2em] text-gold">
               Signature
+            </span>
+          )}
+          {item.chefRecommended && (
+            <span className="rounded-full border border-gold/30 bg-gold/10 px-2.5 py-0.5 font-sans text-[9px] font-semibold uppercase tracking-[0.2em] text-gold">
+              Chef's Pick
             </span>
           )}
           {!item.available && (
@@ -229,7 +268,7 @@ function DishRow({ item, categoryName, index }: { item: MenuItem; categoryName: 
           )}
         </div>
         <p className="mt-1.5 line-clamp-2 font-[family-name:var(--font-cormorant)] text-base italic leading-snug text-muted-foreground sm:text-lg">
-          {item.description}
+          {item.shortDescription || item.description}
         </p>
         <div className="mt-2.5 flex items-center gap-3">
           <span className="font-sans text-[10px] uppercase tracking-[0.25em] text-gold/60">{categoryName}</span>
@@ -237,13 +276,16 @@ function DishRow({ item, categoryName, index }: { item: MenuItem; categoryName: 
         </div>
       </div>
 
-      {/* Price */}
-      <div className="flex shrink-0 items-start pt-1 sm:items-center">
+      {/* Price + view hint */}
+      <div className="flex shrink-0 flex-col items-end justify-center gap-1 pt-1 sm:items-center sm:flex-row sm:gap-3">
         <span className="font-[family-name:var(--font-playfair)] text-xl font-semibold text-gold sm:text-2xl">
           ${item.price}
         </span>
+        <span className="hidden items-center gap-1 font-sans text-[10px] uppercase tracking-[0.2em] text-muted-foreground opacity-0 transition-opacity duration-300 group-hover:opacity-100 sm:flex">
+          View <ChevronRight className="h-3 w-3" />
+        </span>
       </div>
-    </motion.article>
+    </motion.button>
   );
 }
 

@@ -10,14 +10,21 @@ export type MenuCategory = {
 export type MenuItem = {
   id: string;
   name: string;
+  tagline: string | null;
   description: string;
+  shortDescription: string | null;
   price: number;
   image: string | null;
+  images: string[]; // parsed from JSON
   categoryId: string;
   available: boolean;
   veg: boolean;
   spice: number;
   featured: boolean;
+  chefRecommended: boolean;
+  ingredients: string[]; // parsed from JSON
+  allergens: string[]; // parsed from JSON
+  servingSize: string | null;
   order: number;
 };
 
