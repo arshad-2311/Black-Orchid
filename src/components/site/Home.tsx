@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowRight, ChevronDown, Star, Quote, Sparkles, Crown, ChefHat,
+  ArrowRight, Star, Quote, Sparkles, Crown, ChefHat,
   Leaf, Wine, CalendarHeart, MapPin, Instagram as IgIcon, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useApp } from "@/lib/store";
@@ -175,23 +175,6 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
             Explore Menu
           </GoldButton>
         </motion.div>
-      </motion.div>
-
-      {/* Minimal animated scroll indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.6, duration: 0.8 }}
-        className="absolute bottom-8 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2"
-      >
-        <span className="font-sans text-[10px] uppercase tracking-[0.3em] text-foreground/70">Scroll</span>
-        <span className="relative flex h-9 w-5 justify-center rounded-full border border-foreground/40">
-          <motion.span
-            animate={{ y: [0, 12, 0], opacity: [1, 0.2, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-            className="mt-1.5 h-1.5 w-1 rounded-full bg-gold"
-          />
-        </span>
       </motion.div>
     </section>
   );
