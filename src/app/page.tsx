@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useApp, hydrateAdmin } from "@/lib/store";
 import { apiGet } from "@/lib/api";
 import type { SiteSettings } from "@/lib/types";
@@ -18,10 +19,10 @@ import { HoursView } from "@/components/site/HoursView";
 import { ContactView } from "@/components/site/ContactView";
 import { ReservationView } from "@/components/site/ReservationView";
 import { LegalView } from "@/components/site/LegalView";
-import { AdminApp } from "@/components/admin/AdminApp";
 
 export default function Page() {
   const { view } = useApp();
+  const router = useRouter();
   const [settings, setSettings] = useState<SiteSettings | null>(null);
 
   useEffect(() => {
@@ -29,16 +30,11 @@ export default function Page() {
     apiGet<SiteSettings>("/api/settings").then(setSettings).catch(() => {});
   }, []);
 
-  // Admin has its own full-screen layout (no public navbar/footer)
-  if (view === "admin") {
-    return (
-      <>
-        <Loader />
-        <ScrollProgress />
-        <AdminApp />
-      </>
-    );
-  }
+  // The admin panel now lives on its own /admin route. If the legacy #admin
+  // hash is present (or the view was set to "admin"), redirect there.
+  useEffect(() => {
+    if (view === "admin") router.replace("/admin");
+  }, [view, router]);
 
   return (
     <div className="flex min-h-screen flex-col">

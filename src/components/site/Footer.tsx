@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Instagram, Facebook, Twitter, MapPin, Phone, Mail, Clock, Send, UtensilsCrossed } from "lucide-react";
 import { useApp, type ViewKey } from "@/lib/store";
 import type { SiteSettings } from "@/lib/types";
@@ -8,6 +9,7 @@ import { OrnamentDivider } from "./primitives";
 
 export function Footer({ settings }: { settings: SiteSettings | null }) {
   const { setView } = useApp();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
 
@@ -178,7 +180,7 @@ export function Footer({ settings }: { settings: SiteSettings | null }) {
               </button>
             ))}
             <button
-              onClick={() => setView("admin")}
+              onClick={() => router.push("/admin")}
               className="font-sans text-xs text-muted-foreground/50 transition-colors hover:text-gold"
             >
               Admin

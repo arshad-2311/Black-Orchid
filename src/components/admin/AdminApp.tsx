@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, CalendarCheck, UtensilsCrossed, Images, Star, CalendarHeart,
@@ -34,12 +35,15 @@ const NAV: { key: Section; label: string; Icon: React.ComponentType<{ className?
 ];
 
 export function AdminApp() {
-  const { adminUser, adminToken, setAdmin, clearAdmin, setView } = useApp();
+  const router = useRouter();
+  const { adminUser, adminToken, setAdmin, clearAdmin } = useApp();
   const [section, setSection] = useState<Section>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const goHome = () => router.push("/");
+
   if (!adminToken || !adminUser) {
-    return <LoginScreen onSuccess={(token, user) => setAdmin(token, user)} onBack={() => setView("home")} />;
+    return <LoginScreen onSuccess={(token, user) => setAdmin(token, user)} onBack={goHome} />;
   }
 
   return (
@@ -79,7 +83,7 @@ export function AdminApp() {
                 <p className="truncate font-sans text-[10px] text-muted-foreground">{adminUser.email}</p>
                 <span className="mt-1 inline-block rounded bg-gold/20 px-1.5 py-0.5 font-sans text-[9px] uppercase tracking-wider text-gold">{adminUser.role}</span>
               </div>
-              <button onClick={() => { clearAdmin(); setView("home"); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 font-sans text-sm text-red-400 hover:bg-red-500/10">
+              <button onClick={() => { clearAdmin(); goHome(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 font-sans text-sm text-red-400 hover:bg-red-500/10">
                 <LogOut className="h-4 w-4" /> Sign Out
               </button>
             </div>
@@ -92,10 +96,10 @@ export function AdminApp() {
         <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
           <div className="mb-4 flex items-center justify-between lg:hidden">
             <button onClick={() => setSidebarOpen(true)} className="flex h-10 w-10 items-center justify-center rounded-lg border border-gold/20 text-gold"><Menu className="h-5 w-5" /></button>
-            <button onClick={() => setView("home")} className="flex items-center gap-2 font-sans text-xs uppercase tracking-wider text-muted-foreground hover:text-gold"><ArrowLeft className="h-4 w-4" /> Back to site</button>
+            <button onClick={goHome} className="flex items-center gap-2 font-sans text-xs uppercase tracking-wider text-muted-foreground hover:text-gold"><ArrowLeft className="h-4 w-4" /> Back to site</button>
           </div>
           <div className="hidden justify-end lg:flex">
-            <button onClick={() => setView("home")} className="mb-4 flex items-center gap-2 font-sans text-xs uppercase tracking-wider text-muted-foreground hover:text-gold"><ArrowLeft className="h-4 w-4" /> Back to site</button>
+            <button onClick={goHome} className="mb-4 flex items-center gap-2 font-sans text-xs uppercase tracking-wider text-muted-foreground hover:text-gold"><ArrowLeft className="h-4 w-4" /> Back to site</button>
           </div>
           <AnimatePresence mode="wait">
             <motion.div key={section} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
