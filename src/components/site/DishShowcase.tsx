@@ -155,6 +155,8 @@ function DishImageGallery({ dish }: { dish: MenuItem }) {
             key={active}
             src={images[active]}
             alt={dish.name}
+            loading="eager"
+            decoding="async"
             initial={{ opacity: 0, scale: 1.08 }}
             animate={{ opacity: 1, scale: zoom ? 1.8 : 1 }}
             exit={{ opacity: 0 }}
@@ -216,7 +218,7 @@ function DishImageGallery({ dish }: { dish: MenuItem }) {
               onClick={() => setActive(i)}
               className={cn("h-16 w-16 overflow-hidden rounded-lg border-2 transition-all", i === active ? "border-gold opacity-100" : "border-white/20 opacity-60 hover:opacity-100")}
             >
-              <img src={url} alt="" className="h-full w-full object-cover" />
+              <img src={url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
             </button>
           ))}
         </div>
@@ -405,7 +407,7 @@ function RelatedCard({ dish, onClick }: { dish: MenuItem; onClick: () => void })
   return (
     <button onClick={onClick} className="group overflow-hidden rounded-xl border border-white/[0.06] bg-card text-left transition-all hover:-translate-y-1 hover:border-gold/30">
       <div className="relative aspect-square overflow-hidden">
-        {dish.image && <img src={dish.image} alt={dish.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />}
+        {dish.image && <img src={dish.image} alt={dish.name} loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-3">
           <p className="font-[family-name:var(--font-playfair)] text-sm font-semibold text-foreground leading-tight">{dish.name}</p>

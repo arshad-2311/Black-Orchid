@@ -9,7 +9,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
     const user = await db.adminUser.findUnique({ where: { email: email.toLowerCase().trim() } });
-    if (!user || !verifyPassword(password, user.password)) {
+    if (!user || !(await verifyPassword(password, user.password))) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
     const token = signToken({ sub: user.id, email: user.email, role: user.role });

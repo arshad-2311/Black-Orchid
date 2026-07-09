@@ -333,7 +333,7 @@ function BanquetCinema({ settings, onBook }: { settings: SiteSettings | null; on
   return (
     <section ref={ref} className="relative flex h-[100vh] min-h-[600px] items-center overflow-hidden">
       <motion.div style={{ y, scale }} className="absolute inset-0">
-        <img src={IMAGES.banquet[1]} alt="Grand banquet hall with elegant table settings and warm lighting" className="h-full w-full object-cover" />
+        <img src={IMAGES.banquet[1]} alt="Grand banquet hall with elegant table settings and warm lighting" loading="lazy" decoding="async" className="h-full w-full object-cover" />
       </motion.div>
       <div className="absolute inset-0 bg-gradient-to-r from-background via-background/75 to-background/20" />
       <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-background/40" />
@@ -458,7 +458,7 @@ function TestimonialCinema({ testimonials }: { testimonials: Testimonial[] }) {
                 “{t.message}”
               </blockquote>
               <figcaption className="mt-8 flex items-center justify-center gap-3">
-                {t.photo && <img src={t.photo} alt={t.name} className="h-12 w-12 rounded-full object-cover ring-2 ring-gold/40" />}
+                {t.photo && <img src={t.photo} alt={t.name} loading="lazy" decoding="async" className="h-12 w-12 rounded-full object-cover ring-2 ring-gold/40" />}
                 <div className="text-left">
                   <p className="font-[family-name:var(--font-playfair)] text-lg text-foreground">{t.name}</p>
                   <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-gold/80">{t.role}</p>

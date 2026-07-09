@@ -27,7 +27,7 @@ export function HoursView({ settings }: { settings: SiteSettings | null }) {
       {/* ============== CINEMATIC HEADER ============== */}
       <section className="relative flex min-h-[60vh] items-center justify-center overflow-hidden cinematic-grain">
         <div className="absolute inset-0 -z-10">
-          <img src={IMAGES.ambiance[2]} alt="" className="h-full w-full object-cover" />
+          <img src={IMAGES.ambiance[2]} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
         </div>
         <div className="absolute inset-0 bg-background/75" />
         <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background" />

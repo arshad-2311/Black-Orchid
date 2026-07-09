@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, CalendarCheck, UtensilsCrossed, Images, Star, CalendarHeart,
-  Package, Settings, LogOut, Menu, X, Lock, ArrowLeft, ChevronLeft, Mail,
+  Package, Settings, LogOut, Menu, X, Lock, ArrowLeft, ChevronLeft, Mail, KeyRound,
 } from "lucide-react";
 import { useApp } from "@/lib/store";
 import { apiPost } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { AdminInput, AdminButton } from "./ui";
+import { AdminInput, AdminButton, Modal } from "./ui";
 import { AdminOverview } from "./AdminOverview";
 import { AdminReservations } from "./AdminReservations";
 import { AdminMenu } from "./AdminMenu";
@@ -52,6 +52,7 @@ export function AdminApp() {
   const { adminUser, adminToken, setAdmin, clearAdmin } = useApp();
   const [section, setSection] = useState<Section>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pwModalOpen, setPwModalOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem(COLLAPSE_KEY) === "1";
@@ -94,6 +95,7 @@ export function AdminApp() {
             onNav={handleNav}
             user={adminUser}
             onSignOut={signOut}
+            onChangePassword={() => setPwModalOpen(true)}
             collapsed={collapsed}
           />
           <button
@@ -131,6 +133,7 @@ export function AdminApp() {
                   onNav={handleNav}
                   user={adminUser}
                   onSignOut={signOut}
+            onChangePassword={() => setPwModalOpen(true)}
                   collapsed={false}
                   onClose={() => setSidebarOpen(false)}
                 />
@@ -195,6 +198,7 @@ export function AdminApp() {
           </main>
         </div>
       </div>
+      <ChangePasswordModal open={pwModalOpen} onClose={() => setPwModalOpen(false)} onSignOut={signOut} />
     </div>
   );
 }
@@ -203,13 +207,14 @@ export function AdminApp() {
    SIDEBAR CONTENT — shared by desktop + mobile drawer
    ========================================================= */
 function SidebarContent({
-  idPrefix, section, onNav, user, onSignOut, collapsed, onClose,
+  idPrefix, section, onNav, user, onSignOut, onChangePassword, collapsed, onClose,
 }: {
   idPrefix: string;
   section: Section;
   onNav: (s: Section) => void;
   user: { name: string; email: string; role: string };
   onSignOut: () => void;
+  onChangePassword: () => void;
   collapsed: boolean;
   onClose?: () => void;
 }) {
@@ -310,6 +315,17 @@ function SidebarContent({
             </div>
           </div>
         )}
+        <button
+          onClick={onChangePassword}
+          title={collapsed ? "Change Password" : undefined}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 font-sans text-sm text-admin-muted transition-colors hover:bg-white/5 hover:text-admin-text",
+            collapsed && "justify-center px-0"
+          )}
+        >
+          <KeyRound className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Change Password</span>}
+        </button>
         <button
           onClick={onSignOut}
           title={collapsed ? "Sign Out" : undefined}
@@ -417,5 +433,99 @@ function LoginScreen({
         </div>
       </motion.div>
     </div>
+  );
+}
+
+/* =========================================================
+   CHANGE PASSWORD MODAL — bcrypt-hashed, validates current pw
+   ========================================================= */
+function ChangePasswordModal({ open, onClose, onSignOut }: { open: boolean; onClose: () => void; onSignOut: () => void }) {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const reset = () => { setCurrent(""); setNext(""); setConfirm(""); setError(""); };
+
+  const handleClose = () => { reset(); onClose(); };
+
+  const submit = async () => {
+    setError("");
+    if (!current || !next || !confirm) { setError("All fields are required"); return; }
+    if (next.length < 8) { setError("New password must be at least 8 characters"); return; }
+    if (next !== confirm) { setError("New passwords do not match"); return; }
+    if (current === next) { setError("New password must be different from the current password"); return; }
+
+    setSaving(true);
+    try {
+      await apiPost("/api/admin/change-password", { currentPassword: current, newPassword: next });
+      toast.success("Password changed successfully. Please sign in again.");
+      reset();
+      onClose();
+      // Force re-login: the new password is now active, clear the session
+      onSignOut();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Password change failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title="Change Password"
+      subtitle="Update your admin account password"
+      size="sm"
+      footer={
+        <>
+          <AdminButton variant="ghost" onClick={handleClose} disabled={saving}>Cancel</AdminButton>
+          <AdminButton variant="solid" onClick={submit} disabled={saving || !current || !next || !confirm}>
+            {saving ? "Updating…" : "Update Password"}
+          </AdminButton>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <AdminInput
+          label="Current Password"
+          type="password"
+          value={current}
+          onChange={(e) => setCurrent(e.target.value)}
+          placeholder="Enter your current password"
+          autoComplete="current-password"
+          icon={Lock}
+        />
+        <AdminInput
+          label="New Password"
+          type="password"
+          value={next}
+          onChange={(e) => setNext(e.target.value)}
+          placeholder="At least 8 characters"
+          autoComplete="new-password"
+          icon={KeyRound}
+          hint="Minimum 8 characters"
+        />
+        <AdminInput
+          label="Confirm New Password"
+          type="password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          placeholder="Re-enter the new password"
+          autoComplete="new-password"
+          icon={KeyRound}
+        />
+        {error && (
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 font-sans text-xs text-red-400">
+            {error}
+          </div>
+        )}
+        <p className="font-sans text-[11px] text-admin-muted">
+          After changing your password, you will be signed out and asked to sign in again.
+        </p>
+      </div>
+    </Modal>
   );
 }

@@ -13,7 +13,7 @@ async function main() {
       data: {
         email: adminEmail,
         name: "Restaurant Administrator",
-        password: hashPassword("admin123"),
+        password: await hashPassword("admin123"),
         role: "ADMIN",
       },
     });
@@ -21,7 +21,7 @@ async function main() {
   } else {
     await db.adminUser.update({
       where: { email: adminEmail },
-      data: { password: hashPassword("admin123") },
+      data: { password: await hashPassword("admin123") },
     });
     console.log("  ✓ Admin password reset to admin123");
   }
