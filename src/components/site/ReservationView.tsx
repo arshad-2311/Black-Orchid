@@ -3,7 +3,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, ArrowRight, Calendar, Check, Clock, Mail, Minus, Phone, Plus, Sparkles, User, Users,
+  ArrowLeft, ArrowRight, Calendar, Check, Clock, Mail, Minus, Phone, Plus, Sparkles, User,
 } from "lucide-react";
 import { Eyebrow, LuxuryButton, OrnamentDivider } from "./primitives";
 import { RevealText } from "./motion";
@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import type { Reservation } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const STEPS = ["Details", "Date & Guests", "Confirm"] as const;
+const STEPS = ["Date", "Time", "Guests", "Details", "Confirm"] as const;
 const LUNCH_TIMES = ["11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM"];
 const DINNER_TIMES = ["6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM", "9:00 PM", "9:30 PM"];
 const GUEST_OPTIONS = ["1", "2", "3", "4", "5", "6", "7", "8+"] as const;
@@ -61,15 +61,21 @@ export function ReservationView() {
   const validateStep = (s: number): Record<string, string> => {
     const e: Record<string, string> = {};
     if (s === 0) {
+      // Date
+      if (!form.date) e.date = "Please select a date";
+    } else if (s === 1) {
+      // Time
+      if (!form.time) e.time = "Please select a time";
+    } else if (s === 2) {
+      // Guests — always valid (defaults to 2), no validation needed
+    } else if (s === 3) {
+      // Customer details
       if (!form.name.trim()) e.name = "Please enter your name";
       else if (form.name.trim().length < 2) e.name = "Name is too short";
       if (!form.phone.trim()) e.phone = "Please enter your phone number";
       else if (form.phone.replace(/\D/g, "").length < 7) e.phone = "Enter a valid phone number";
       if (!form.email.trim()) e.email = "Please enter your email";
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Enter a valid email address";
-    } else if (s === 1) {
-      if (!form.date) e.date = "Please select a date";
-      if (!form.time) e.time = "Please select a time";
     }
     return e;
   };
@@ -186,16 +192,8 @@ export function ReservationView() {
                 <div className="mt-10 sm:mt-12">
                   <AnimatePresence mode="wait" custom={direction}>
                     {step === 0 && (
-                      <motion.div
-                        key="step-0"
-                        custom={direction}
-                        variants={stepVariants}
-                        initial="enter"
-                        animate="center"
-                        exit="exit"
-                        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                      >
-                        <Step1Details form={form} errors={errors} update={update} />
+                      <motion.div key="step-0" custom={direction} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}>
+                        <StepDate form={form} errors={errors} update={update} today={today} />
                         <div className="mt-8">
                           <LuxuryButton variant="solid" onClick={next} className="w-full min-h-[52px]">
                             Continue <ArrowRight className="h-4 w-4" />
@@ -205,16 +203,8 @@ export function ReservationView() {
                     )}
 
                     {step === 1 && (
-                      <motion.div
-                        key="step-1"
-                        custom={direction}
-                        variants={stepVariants}
-                        initial="enter"
-                        animate="center"
-                        exit="exit"
-                        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                      >
-                        <Step2DateTime form={form} errors={errors} update={update} today={today} />
+                      <motion.div key="step-1" custom={direction} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}>
+                        <StepTime form={form} errors={errors} update={update} />
                         <div className="mt-8 flex items-center gap-3">
                           <LuxuryButton variant="ghost" onClick={back} className="min-h-[52px]">
                             <ArrowLeft className="h-4 w-4" /> Back
@@ -227,33 +217,42 @@ export function ReservationView() {
                     )}
 
                     {step === 2 && (
-                      <motion.div
-                        key="step-2"
-                        custom={direction}
-                        variants={stepVariants}
-                        initial="enter"
-                        animate="center"
-                        exit="exit"
-                        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                      >
-                        <Step3Review form={form} update={update} />
+                      <motion.div key="step-2" custom={direction} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}>
+                        <StepGuests form={form} update={update} />
                         <div className="mt-8 flex items-center gap-3">
                           <LuxuryButton variant="ghost" onClick={back} className="min-h-[52px]">
                             <ArrowLeft className="h-4 w-4" /> Back
                           </LuxuryButton>
-                          <LuxuryButton
-                            variant="solid"
-                            onClick={submit}
-                            disabled={loading}
-                            className="min-h-[52px] flex-1"
-                          >
-                            {loading ? (
-                              "Securing your table…"
-                            ) : (
-                              <>
-                                Confirm Reservation <Sparkles className="h-4 w-4" />
-                              </>
-                            )}
+                          <LuxuryButton variant="solid" onClick={next} className="min-h-[52px] flex-1">
+                            Continue <ArrowRight className="h-4 w-4" />
+                          </LuxuryButton>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {step === 3 && (
+                      <motion.div key="step-3" custom={direction} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}>
+                        <StepDetails form={form} errors={errors} update={update} />
+                        <div className="mt-8 flex items-center gap-3">
+                          <LuxuryButton variant="ghost" onClick={back} className="min-h-[52px]">
+                            <ArrowLeft className="h-4 w-4" /> Back
+                          </LuxuryButton>
+                          <LuxuryButton variant="solid" onClick={next} className="min-h-[52px] flex-1">
+                            Continue <ArrowRight className="h-4 w-4" />
+                          </LuxuryButton>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {step === 4 && (
+                      <motion.div key="step-4" custom={direction} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}>
+                        <StepConfirm form={form} update={update} />
+                        <div className="mt-8 flex items-center gap-3">
+                          <LuxuryButton variant="ghost" onClick={back} className="min-h-[52px]">
+                            <ArrowLeft className="h-4 w-4" /> Back
+                          </LuxuryButton>
+                          <LuxuryButton variant="solid" onClick={submit} disabled={loading} className="min-h-[52px] flex-1">
+                            {loading ? "Securing your table…" : <>Confirm Reservation <Sparkles className="h-4 w-4" /></>}
                           </LuxuryButton>
                         </div>
                         <p className="mt-4 text-center font-sans text-[11px] text-muted-foreground/70">
@@ -342,58 +341,9 @@ function StepDot({ index, current }: { index: number; current: number }) {
 }
 
 /* =========================================================
-   STEP 1 — YOUR DETAILS
+   STEP 1 — DATE
    ========================================================= */
-function Step1Details({
-  form, errors, update,
-}: {
-  form: FormState;
-  errors: Record<string, string>;
-  update: (key: keyof FormState, value: string) => void;
-}) {
-  return (
-    <div className="space-y-5">
-      <PremiumField id="r-name" label="Full Name" icon={User} error={errors.name}>
-        <input
-          id="r-name"
-          value={form.name}
-          onChange={(e) => update("name", e.target.value)}
-          placeholder="Jane Doe"
-          className={inputClass}
-          autoComplete="name"
-        />
-      </PremiumField>
-      <div className="grid gap-5 sm:grid-cols-2">
-        <PremiumField id="r-phone" label="Phone" icon={Phone} error={errors.phone}>
-          <input
-            id="r-phone"
-            value={form.phone}
-            onChange={(e) => update("phone", e.target.value)}
-            placeholder="+1 (555) 000-0000"
-            className={inputClass}
-            autoComplete="tel"
-          />
-        </PremiumField>
-        <PremiumField id="r-email" label="Email" icon={Mail} error={errors.email}>
-          <input
-            id="r-email"
-            type="email"
-            value={form.email}
-            onChange={(e) => update("email", e.target.value)}
-            placeholder="jane@email.com"
-            className={inputClass}
-            autoComplete="email"
-          />
-        </PremiumField>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-   STEP 2 — DATE, TIME & GUESTS
-   ========================================================= */
-function Step2DateTime({
+function StepDate({
   form, errors, update, today,
 }: {
   form: FormState;
@@ -402,8 +352,11 @@ function Step2DateTime({
   today: string;
 }) {
   return (
-    <div className="space-y-9">
-      {/* Date */}
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground sm:text-4xl">Choose a Date</h2>
+        <p className="mt-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">Select the evening you wish to join us.</p>
+      </div>
       <PremiumField id="r-date" label="Date" icon={Calendar} error={errors.date}>
         <input
           id="r-date"
@@ -414,39 +367,119 @@ function Step2DateTime({
           className={cn(inputClass, "r-date-input")}
         />
       </PremiumField>
+    </div>
+  );
+}
 
-      {/* Time slots */}
+/* =========================================================
+   STEP 2 — TIME
+   ========================================================= */
+function StepTime({
+  form, errors, update,
+}: {
+  form: FormState;
+  errors: Record<string, string>;
+  update: (key: keyof FormState, value: string) => void;
+}) {
+  return (
+    <div className="space-y-6">
       <div>
-        <SectionLabel icon={Clock} text="Time" />
-        <div className="space-y-5">
-          <TimeGroup
-            title="Lunch Service"
-            times={LUNCH_TIMES}
-            selected={form.time}
-            onSelect={(t) => update("time", t)}
-          />
-          <TimeGroup
-            title="Dinner Service"
-            times={DINNER_TIMES}
-            selected={form.time}
-            onSelect={(t) => update("time", t)}
-          />
-        </div>
-        {errors.time && (
-          <motion.p
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-2 font-sans text-xs text-red-400"
-          >
-            {errors.time}
-          </motion.p>
-        )}
+        <h2 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground sm:text-4xl">Select a Time</h2>
+        <p className="mt-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">Lunch or dinner — your table awaits.</p>
       </div>
+      <div className="space-y-5">
+        <TimeGroup title="Lunch Service" times={LUNCH_TIMES} selected={form.time} onSelect={(t) => update("time", t)} />
+        <TimeGroup title="Dinner Service" times={DINNER_TIMES} selected={form.time} onSelect={(t) => update("time", t)} />
+      </div>
+      {errors.time && (
+        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="font-sans text-xs text-red-400">
+          {errors.time}
+        </motion.p>
+      )}
+    </div>
+  );
+}
 
-      {/* Guests */}
+/* =========================================================
+   STEP 3 — GUESTS
+   ========================================================= */
+function StepGuests({
+  form, update,
+}: {
+  form: FormState;
+  update: (key: keyof FormState, value: string) => void;
+}) {
+  return (
+    <div className="space-y-6">
       <div>
-        <SectionLabel icon={Users} text="Party Size" />
-        <GuestStepper value={form.guests} onChange={(v) => update("guests", v)} />
+        <h2 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground sm:text-4xl">Party Size</h2>
+        <p className="mt-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">How many will be joining the table?</p>
+      </div>
+      <GuestStepper value={form.guests} onChange={(v) => update("guests", v)} />
+    </div>
+  );
+}
+
+/* =========================================================
+   STEP 4 — CUSTOMER DETAILS
+   ========================================================= */
+function StepDetails({
+  form, errors, update,
+}: {
+  form: FormState;
+  errors: Record<string, string>;
+  update: (key: keyof FormState, value: string) => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground sm:text-4xl">Your Details</h2>
+        <p className="mt-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">So our maître d' can confirm your table.</p>
+      </div>
+      <PremiumField id="r-name" label="Full Name" icon={User} error={errors.name}>
+        <input id="r-name" value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="Jane Doe" className={inputClass} autoComplete="name" />
+      </PremiumField>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <PremiumField id="r-phone" label="Phone" icon={Phone} error={errors.phone}>
+          <input id="r-phone" value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+1 (555) 000-0000" className={inputClass} autoComplete="tel" />
+        </PremiumField>
+        <PremiumField id="r-email" label="Email" icon={Mail} error={errors.email}>
+          <input id="r-email" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="jane@email.com" className={inputClass} autoComplete="email" />
+        </PremiumField>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   STEP 5 — CONFIRM (review + special requests)
+   ========================================================= */
+function StepConfirm({
+  form, update,
+}: {
+  form: FormState;
+  update: (key: keyof FormState, value: string) => void;
+}) {
+  return (
+    <div className="space-y-7">
+      <div>
+        <h2 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground sm:text-4xl">Confirm Your Reservation</h2>
+        <p className="mt-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">Review the details and add any special requests.</p>
+      </div>
+      <SummaryCard form={form} />
+      <div>
+        <label htmlFor="r-special" className="mb-2 flex items-center gap-1.5 font-sans text-[10px] uppercase tracking-[0.25em] text-gold/80">
+          <Sparkles className="h-3.5 w-3.5" /> Special Requests
+        </label>
+        <textarea
+          id="r-special"
+          rows={4}
+          value={form.special}
+          onChange={(e) => update("special", e.target.value)}
+          placeholder="Anniversary celebration, dietary requirements, seating preference…"
+          className={cn(inputClass, "h-auto resize-none py-3.5")}
+        />
+        <p className="mt-2 font-sans text-[11px] text-muted-foreground/70">Optional — share anything that would make your evening more memorable.</p>
       </div>
     </div>
   );
@@ -546,42 +579,6 @@ function GuestStepper({ value, onChange }: { value: string; onChange: (v: string
             </button>
           );
         })}
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-   STEP 3 — REVIEW & SPECIAL REQUESTS
-   ========================================================= */
-function Step3Review({
-  form, update,
-}: {
-  form: FormState;
-  update: (key: keyof FormState, value: string) => void;
-}) {
-  return (
-    <div className="space-y-7">
-      <SummaryCard form={form} />
-
-      <div>
-        <label
-          htmlFor="r-special"
-          className="mb-2 flex items-center gap-1.5 font-sans text-[10px] uppercase tracking-[0.25em] text-gold/80"
-        >
-          <Sparkles className="h-3.5 w-3.5" /> Special Requests
-        </label>
-        <textarea
-          id="r-special"
-          rows={4}
-          value={form.special}
-          onChange={(e) => update("special", e.target.value)}
-          placeholder="Anniversary celebration, dietary requirements, seating preference…"
-          className={cn(inputClass, "h-auto resize-none py-3.5")}
-        />
-        <p className="mt-2 font-sans text-[11px] text-muted-foreground/70">
-          Optional — share anything that would make your evening more memorable.
-        </p>
       </div>
     </div>
   );
@@ -759,15 +756,6 @@ function PremiumField({
           {error}
         </motion.p>
       )}
-    </div>
-  );
-}
-
-function SectionLabel({ icon: Icon, text }: { icon: React.ComponentType<{ className?: string }>; text: string }) {
-  return (
-    <div className="mb-4 flex items-center gap-1.5">
-      <Icon className="h-3.5 w-3.5 text-gold/80" />
-      <span className="font-sans text-[10px] uppercase tracking-[0.25em] text-gold/80">{text}</span>
     </div>
   );
 }
