@@ -105,7 +105,15 @@ export function AdminSectionTitle({ title, subtitle, action }: { title: string; 
 }
 
 /* =========================================================
-   MODAL — wider, scale+fade, sticky footer
+   MODAL — premium, fast, accessible
+   - Opens instantly (150ms fade + scale)
+   - 70% dark overlay + backdrop blur
+   - z-[100] above all content
+   - Body scroll lock
+   - Escape to close
+   - Focus trap + focus restoration
+   - ARIA dialog attributes
+   - Sticky footer with Cancel/Save
    ========================================================= */
 export function Modal({
   open, onClose, title, subtitle, children, footer, wide = false, size = "md",
@@ -113,11 +121,58 @@ export function Modal({
   open: boolean; onClose: () => void; title: string; subtitle?: string;
   children: React.ReactNode; footer?: React.ReactNode; wide?: boolean; size?: "sm" | "md" | "lg" | "xl";
 }) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+
+  // Body scroll lock
   useEffect(() => {
-    if (open) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "";
-    return () => { document.body.style.overflow = ""; };
+    if (open) {
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = ""; };
+    }
+    document.body.style.overflow = "";
   }, [open]);
+
+  // Escape to close + focus trap
+  useEffect(() => {
+    if (!open) return;
+    previouslyFocused.current = document.activeElement as HTMLElement;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { e.preventDefault(); onClose(); return; }
+      if (e.key === "Tab") {
+        const dialog = dialogRef.current;
+        if (!dialog) return;
+        const focusable = dialog.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+
+    // Focus the dialog (or first focusable) on open — microtask delay so DOM is ready
+    const t = setTimeout(() => {
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const first = dialog.querySelector<HTMLElement>('input, button, select, textarea, [tabindex]:not([tabindex="-1"])');
+      (first || dialog).focus();
+    }, 50);
+
+    // Restore focus to the trigger on close
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      clearTimeout(t);
+      previouslyFocused.current?.focus?.();
+    };
+  }, [open, onClose]);
 
   const maxW = wide ? "max-w-2xl" : size === "xl" ? "max-w-4xl" : size === "lg" ? "max-w-2xl" : size === "sm" ? "max-w-sm" : "max-w-lg";
 
@@ -128,28 +183,34 @@ export function Modal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 200 }}
-          className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-md sm:p-8"
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-md sm:p-8"
           onClick={onClose}
+          role="presentation"
         >
           <motion.div
-            initial={{ opacity: 0, y: 16, scale: 0.97 }}
+            ref={dialogRef}
+            initial={{ opacity: 0, y: 12, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.97 }}
-            transition={{ duration: 240, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className={cn("admin-surface-elevated my-auto w-full overflow-hidden", maxW)}
+            className={cn("admin-surface-elevated my-auto w-full overflow-hidden shadow-soft-lg", maxW)}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+            tabIndex={-1}
           >
             {/* Header */}
             <div className="flex items-start justify-between gap-4 border-b border-admin-border px-8 py-6">
               <div>
-                <h3 className="font-[family-name:var(--font-playfair)] text-2xl font-semibold text-admin-text">{title}</h3>
+                <h3 id="modal-title" className="font-[family-name:var(--font-playfair)] text-2xl font-semibold text-admin-text">{title}</h3>
                 {subtitle && <p className="mt-1 font-sans text-sm text-admin-muted">{subtitle}</p>}
               </div>
               <button
                 onClick={onClose}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-admin-border text-admin-muted transition-all hover:border-admin-gold/50 hover:bg-admin-gold/10 hover:text-admin-gold"
-                aria-label="Close"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-admin-border text-admin-muted transition-all hover:border-admin-gold/50 hover:bg-admin-gold/10 hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+                aria-label="Close dialog"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -158,7 +219,7 @@ export function Modal({
             <div className="max-h-[70vh] overflow-y-auto px-8 py-6">{children}</div>
             {/* Sticky footer */}
             {footer && (
-              <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-admin-border bg-admin-card/80 px-8 py-4 backdrop-blur-md">
+              <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-admin-border bg-admin-card/95 px-8 py-4 backdrop-blur-md">
                 {footer}
               </div>
             )}
@@ -270,7 +331,7 @@ export function SearchableSelect({
               initial={{ opacity: 0, y: -6, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -6, scale: 0.98 }}
-              transition={{ duration: 160, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
               className="admin-surface-elevated absolute z-50 mt-2 w-full overflow-hidden p-1.5"
             >
               {searchable && (
@@ -375,7 +436,7 @@ export function AdminButton({
       {...props}
       onClick={handleClick}
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-xl font-sans uppercase tracking-wider transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none",
+        "inline-flex items-center justify-center gap-1.5 rounded-xl font-sans uppercase tracking-wider transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-admin-bg",
         sizes[size], styles[variant], className
       )}
     >
@@ -419,6 +480,7 @@ export function Badge({ children, tone = "gold" }: { children: React.ReactNode; 
 
 /* =========================================================
    IMAGE UPLOADER — drag & drop, preview, progress, remove/replace
+   Uploads to /api/upload (saves to public/uploads/), NEVER Base64 in DB.
    ========================================================= */
 export function ImageUploader({
   value, onChange, label = "Image", aspect = "16/10",
