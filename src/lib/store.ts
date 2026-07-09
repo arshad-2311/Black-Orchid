@@ -68,11 +68,16 @@ export function hydrateAdmin() {
     }
   }
   // hydrate view from hash
-  const h = window.location.hash.replace("#", "");
   const valid: ViewKey[] = [
     "home","about","menu","banquet","gallery","catering","contact","hours","reservation","privacy","terms","admin",
   ];
-  if (valid.includes(h as ViewKey)) {
-    useApp.setState({ view: h as ViewKey });
-  }
+  const applyHash = () => {
+    const h = window.location.hash.replace("#", "");
+    if (valid.includes(h as ViewKey)) {
+      useApp.setState({ view: h as ViewKey });
+    }
+  };
+  applyHash();
+  // Listen for hashchange so direct URL navigation with #hash works
+  window.addEventListener("hashchange", applyHash);
 }
