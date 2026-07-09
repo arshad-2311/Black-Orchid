@@ -529,7 +529,7 @@ export function AdminMenu() {
                           ) : null}
                         </div>
                         <span className="shrink-0 font-[family-name:var(--font-playfair)] text-lg font-semibold text-admin-gold">${item.price}</span>
-                        <div className="flex shrink-0 gap-1 opacity-0 transition-opacity duration-200 focus-within:opacity-100 group-hover:opacity-100">
+                        <div className="flex shrink-0 gap-1 transition-opacity duration-200">
                           <button
                             onClick={() => setItemModal(item)}
                             aria-label={`Edit ${item.name}`}

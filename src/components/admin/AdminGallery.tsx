@@ -118,7 +118,7 @@ export function AdminGallery() {
               className="group relative overflow-hidden rounded-xl border border-admin-border bg-admin-bg"
             >
               <img src={img.url} alt={img.title} className="aspect-square w-full object-cover" />
-              <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-t from-black/85 via-black/30 to-transparent p-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-t from-black/85 via-black/30 to-transparent p-3 opacity-100 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100">
                 <div className="flex justify-end gap-1.5">
                   <button
                     onClick={() => setModal({ open: true, img })}
