@@ -16,7 +16,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   ];
   for (const k of allowed) if (k in body) data[k] = body[k];
   if (data.price !== undefined) data.price = Number(data.price);
-  if (data.spice !== undefined) data.spice = Number(data.spice);
+  if (data.spice !== undefined) {
+    const s = Number(data.spice);
+    data.spice = Number.isFinite(s) ? s : 0;
+  }
   if ("images" in body) {
     const imgs: string[] = Array.isArray(body.images) ? body.images : [];
     data.images = JSON.stringify(imgs);

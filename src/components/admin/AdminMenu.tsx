@@ -6,7 +6,7 @@ import {
   Upload, X, ChevronLeft, ChevronRight, ChefHat, Link as LinkIcon,
   AlertTriangle,
 } from "lucide-react";
-import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
+import { apiGet, apiPost, apiPatch, apiDelete, apiUpload } from "@/lib/api";
 import type { MenuCategory, MenuItem } from "@/lib/types";
 import {
   AdminCard, AdminButton, AdminInput, AdminTextarea, SearchableSelect, Toggle,
@@ -71,6 +71,7 @@ function MultiImageUploader({
   onChange: (v: string[]) => void;
 }) {
   const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [urlInput, setUrlInput] = useState("");
   const fileRef = useRef<HTMLInputElement | null>(null);
   // When set, the next file pick replaces this index instead of appending.
@@ -85,27 +86,29 @@ function MultiImageUploader({
     return true;
   };
 
-  const readFile = (file: File, cb: (dataUrl: string) => void) => {
-    const reader = new FileReader();
-    reader.onload = () => cb(reader.result as string);
-    reader.onerror = () => setError("Could not read file");
-    reader.readAsDataURL(file);
-  };
-
-  const onPick = (file?: File) => {
+  const onPick = async (file?: File) => {
     if (!file) return;
     if (!validate(file)) return;
-    readFile(file, (dataUrl) => {
+    setUploading(true);
+    setError("");
+    try {
+      // Upload to /api/upload — saves to public/uploads/, returns a URL.
+      // NEVER store Base64 in the database.
+      const url = await apiUpload(file);
       if (replaceIndexRef.current !== null) {
         const idx = replaceIndexRef.current;
         const next = [...value];
-        next[idx] = dataUrl;
+        next[idx] = url;
         onChange(next);
         replaceIndexRef.current = null;
       } else {
-        onChange([...value, dataUrl]);
+        onChange([...value, url]);
       }
-    });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const triggerAdd = () => {
@@ -211,10 +214,20 @@ function MultiImageUploader({
         <button
           type="button"
           onClick={triggerAdd}
-          className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-admin-border bg-admin-bg/40 text-admin-muted transition-all duration-200 hover:border-admin-gold/40 hover:bg-admin-gold/5 hover:text-admin-gold"
+          disabled={uploading}
+          className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-admin-border bg-admin-bg/40 text-admin-muted transition-all duration-200 hover:border-admin-gold/40 hover:bg-admin-gold/5 hover:text-admin-gold disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <Upload className="h-5 w-5" />
-          <span className="font-sans text-[10px] font-semibold uppercase tracking-wider">Add Image</span>
+          {uploading ? (
+            <>
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-admin-gold/30 border-t-admin-gold" />
+              <span className="font-sans text-[10px] font-semibold uppercase tracking-wider">Uploading…</span>
+            </>
+          ) : (
+            <>
+              <Upload className="h-5 w-5" />
+              <span className="font-sans text-[10px] font-semibold uppercase tracking-wider">Add Image</span>
+            </>
+          )}
         </button>
       </div>
 

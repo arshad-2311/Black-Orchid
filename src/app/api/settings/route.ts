@@ -20,10 +20,16 @@ export async function PUT(req: Request) {
   ];
   const data: Record<string, unknown> = {};
   for (const k of allowed) if (k in body) data[k] = body[k];
-  const updated = await db.siteSettings.upsert({
-    where: { id: "singleton" },
-    update: data,
-    create: { id: "singleton", ...data },
-  });
+
+  // The singleton row is created during seeding. Use update (not upsert) to
+  // avoid Prisma validating a full `create` with all required fields.
+  // If the row somehow doesn't exist, create it with sensible defaults first.
+  const existing = await db.siteSettings.findUnique({ where: { id: "singleton" } });
+  if (!existing) {
+    await db.siteSettings.create({ data: { id: "singleton", ...data } as any });
+  } else {
+    await db.siteSettings.update({ where: { id: "singleton" }, data });
+  }
+  const updated = await db.siteSettings.findUnique({ where: { id: "singleton" } });
   return NextResponse.json(updated);
 }

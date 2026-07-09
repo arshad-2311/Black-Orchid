@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { apiUpload } from "@/lib/api";
 
 /* =========================================================
    SURFACES
@@ -439,18 +440,21 @@ export function ImageUploader({
     setError(""); return true;
   };
 
-  const handleFile = useCallback((file: File) => {
+  const handleFile = useCallback(async (file: File) => {
     if (!validate(file)) return;
-    const reader = new FileReader();
-    reader.onprogress = (e) => { if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100)); };
-    reader.onload = () => {
+    setProgress(0);
+    setError("");
+    try {
+      // Upload to /api/upload — saves to public/uploads/, returns a URL.
+      // NEVER store Base64 in the database.
+      const url = await apiUpload(file);
       setProgress(100);
-      setTimeout(() => {
-        setProgress(null);
-        onChange(reader.result as string);
-      }, 300);
-    };
-    reader.readAsDataURL(file);
+      setTimeout(() => setProgress(null), 400);
+      onChange(url);
+    } catch (e) {
+      setProgress(null);
+      setError(e instanceof Error ? e.message : "Upload failed");
+    }
   }, [onChange]);
 
   const onDrop = (e: React.DragEvent) => {
