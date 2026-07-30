@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useApp, hydrateAdmin } from "@/lib/store";
 import { apiGet } from "@/lib/api";
 import type { SiteSettings } from "@/lib/types";
-import { Navbar } from "@/components/site/Navbar";
+import { PillNav } from "@/components/site/PillNav";
 import { Footer } from "@/components/site/Footer";
 import { ScrollProgress, StickyReserve } from "@/components/site/Chrome";
 import { Cursor } from "@/components/site/Cursor";
@@ -42,7 +42,7 @@ export default function Page() {
       <Cursor />
       <Loader />
       <ScrollProgress />
-      <Navbar settings={settings} />
+      <PillNav settings={settings} />
       <div className="flex-1">
         {view === "home" && <Home settings={settings} />}
         {view === "about" && <AboutView settings={settings} />}

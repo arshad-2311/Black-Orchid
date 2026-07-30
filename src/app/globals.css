@@ -363,6 +363,35 @@
 }
 
 /* =========================================================
+   PREMIUM BORDER GLOW — subtle animated gold border glow
+   Applied only to key CTAs, featured dishes, premium cards.
+   Respects prefers-reduced-motion (static glow).
+   ========================================================= */
+@keyframes borderGlowPulse {
+  0%, 100% { box-shadow: 0 0 20px -8px rgba(212, 175, 55, 0.3), inset 0 0 20px -10px rgba(212, 175, 55, 0.1); border-color: rgba(212, 175, 55, 0.25); }
+  50% { box-shadow: 0 0 30px -6px rgba(212, 175, 55, 0.45), inset 0 0 20px -8px rgba(212, 175, 55, 0.15); border-color: rgba(212, 175, 55, 0.4); }
+}
+.glow-border {
+  animation: borderGlowPulse 4s ease-in-out infinite;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  transition: border-color 0.4s ease, box-shadow 0.4s ease;
+}
+.glow-border-hover {
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  transition: border-color 0.4s ease, box-shadow 0.4s ease;
+}
+.glow-border-hover:hover {
+  animation: borderGlowPulse 3s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .glow-border, .glow-border-hover:hover {
+    animation: none;
+    box-shadow: 0 0 20px -8px rgba(212, 175, 55, 0.3);
+    border-color: rgba(212, 175, 55, 0.25);
+  }
+}
+
+/* =========================================================
    ADMIN PREMIUM DESIGN SYSTEM (scoped to .admin-root)
    ========================================================= */
 .admin-root {

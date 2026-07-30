@@ -12,6 +12,8 @@ import type { MenuItem, GalleryImage, Testimonial, SiteSettings, MenuCategory } 
 import { Eyebrow, LuxuryButton, TextLink, OrnamentDivider, SpiceLevel, VegBadge } from "./primitives";
 import { RevealText, Parallax, ImageReveal, RevealGroup, RevealItem } from "./motion";
 import { Lightbox } from "./Lightbox";
+import { ScrollStack } from "./ScrollStack";
+import { CircularGallery } from "./CircularGallery";
 import { cn } from "@/lib/utils";
 
 export function Home({ settings }: { settings: SiteSettings | null }) {
@@ -36,9 +38,10 @@ export function Home({ settings }: { settings: SiteSettings | null }) {
       <Hero settings={settings} />
       <SignatureDishes items={featuredItems} categories={categories} onViewMenu={() => setView("menu")} />
       <Story settings={settings} onReserve={() => setView("reservation")} />
-      <Philosophy onReserve={() => setView("reservation")} />
+      <ExperienceScrollStack onReserve={() => setView("reservation")} onViewMenu={() => setView("menu")} onBook={() => setView("banquet")} />
       <GalleryPreview images={gallery} onViewAll={() => setView("gallery")} />
       <BanquetCinema settings={settings} onBook={() => setView("banquet")} />
+      <CircularGallerySection gallery={gallery} />
       <TestimonialCinema testimonials={testimonials} />
       <GoogleReviews />
       <ReservationCinema settings={settings} onReserve={() => setView("reservation")} />
@@ -246,7 +249,7 @@ function DishCard({ item, index, onViewMenu }: { item: MenuItem; index: number; 
       onMouseLeave={() => setHover(false)}
       onClick={onViewMenu}
       aria-label={`${item.name} — $${item.price}. ${item.veg ? "Vegetarian" : "Non-vegetarian"}. View in menu.`}
-      className="group relative w-full overflow-hidden rounded-[1.5rem] border border-white/[0.06] bg-card text-left"
+      className="glow-border-hover group relative w-full overflow-hidden rounded-[1.5rem] border border-white/[0.06] bg-card text-left"
     >
       <div className="relative aspect-[4/5] overflow-hidden">
         {item.image && (
@@ -282,43 +285,78 @@ function DishCard({ item, index, onViewMenu }: { item: MenuItem; index: number; 
   );
 }
 
-/* ============== PHILOSOPHY (Why Choose Us) — numbered editorial ============== */
-function Philosophy({ onReserve }: { onReserve: () => void }) {
-  const pillars = [
-    { n: "01", title: "Sourced with Devotion", desc: "From trusted farms and distant markets, at the peak of season." },
-    { n: "02", title: "Crafted by Masters", desc: "A brigade of chefs with Michelin-graded pedigree and relentless craft." },
-    { n: "03", title: "Served as Theatre", desc: "Every plate arrives with quiet ceremony — a moment composed for you." },
-    { n: "04", title: "Remembered Forever", desc: "An evening designed to linger in memory, long after the last pour." },
+/* ============== EXPERIENCE SCROLL STACK — cinematic pin & stack storytelling ============== */
+function ExperienceScrollStack({
+  onReserve, onViewMenu, onBook,
+}: { onReserve: () => void; onViewMenu: () => void; onBook: () => void }) {
+  const cards = [
+    {
+      image: IMAGES.food[0],
+      alt: "Signature dish plated with precision",
+      eyebrow: "Signature Dishes",
+      title: "Composed to Perfection",
+      description: "Each dish is a study in restraint and luxury — sourced at dawn, plated with devotion, served as theatre.",
+      cta: { label: "Explore Menu", onClick: onViewMenu },
+    },
+    {
+      image: IMAGES.interior[0],
+      alt: "Luxury restaurant interior with warm lighting",
+      eyebrow: "Restaurant Experience",
+      title: "An Evening, Composed",
+      description: "Crystal chandeliers, velvet booths, and a soundtrack curated for the senses. Every visit is a chapter.",
+      cta: { label: "Reserve a Table", onClick: onReserve },
+    },
+    {
+      image: IMAGES.banquet[1],
+      alt: "Grand banquet hall set for celebration",
+      eyebrow: "Banquet Experience",
+      title: "Celebrations of Distinction",
+      description: "A grand hall, a dedicated team, and a menu sculpted for your milestone. Weddings, galas, and legends.",
+      cta: { label: "Book the Banquet", onClick: onBook },
+    },
+    {
+      image: IMAGES.interior[3],
+      alt: "Intimate private dining room",
+      eyebrow: "Private Dining",
+      title: "Reserved for the Few",
+      description: "An intimate room for the discerning few. Bespoke menus, discreet service, and an evening yours alone.",
+      cta: { label: "Reserve a Table", onClick: onReserve },
+    },
   ];
   return (
-    <section className="relative overflow-hidden bg-[#080808] py-32 sm:py-40">
-      <div className="ambient-orb" style={{ width: 500, height: 500, background: "rgba(212,175,55,0.06)", top: "30%", right: "-10%" }} />
-      <div className="mx-auto max-w-7xl px-6 sm:px-10">
-        <div className="max-w-2xl">
-          <Eyebrow className="mb-6">Why Choose Us</Eyebrow>
-          <RevealText text="Four pillars of an evening" as="h2" className="font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.1] tracking-luxe text-foreground sm:text-6xl" />
-        </div>
-        <div className="mt-20 grid gap-px overflow-hidden rounded-[2rem] border border-white/[0.06] sm:grid-cols-2 lg:grid-cols-4">
-          {pillars.map((p, i) => (
-            <motion.div
-              key={p.n}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.7, delay: i * 0.1 }}
-              className="group relative bg-card p-10 transition-colors duration-500 hover:bg-[#181818]"
-            >
-              <span className="font-[family-name:var(--font-playfair)] text-6xl font-bold text-white/[0.08] transition-colors duration-500 group-hover:text-gold/30" aria-hidden>{p.n}</span>
-              <h3 className="mt-6 font-[family-name:var(--font-playfair)] text-2xl font-semibold text-foreground">{p.title}</h3>
-              <p className="mt-3 max-w-[300px] font-[family-name:var(--font-cormorant)] text-lg italic leading-snug text-foreground/70">{p.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-        {/* CTA — clear next step */}
-        <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.3 }} className="mt-14 flex justify-center">
-          <LuxuryButton onClick={onReserve} className="min-h-[48px] text-sm">Reserve a Table <ArrowRight className="h-4 w-4" /></LuxuryButton>
-        </motion.div>
+    <section className="relative bg-[#080808]">
+      <div className="mx-auto max-w-7xl px-6 pt-32 text-center sm:px-10">
+        <Eyebrow className="mb-6 justify-center">The Experience</Eyebrow>
+        <RevealText text="A journey through the evening" as="h2" className="font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.1] tracking-luxe text-foreground sm:text-6xl" />
+        <p className="mx-auto mt-5 max-w-xl font-[family-name:var(--font-cormorant)] text-xl italic text-muted-foreground">
+          Scroll to explore the moments that make Black Orchid unforgettable.
+        </p>
       </div>
+      <ScrollStack cards={cards} className="mt-16" />
+    </section>
+  );
+}
+
+/* ============== CIRCULAR GALLERY — premium infinite horizontal carousel ============== */
+function CircularGallerySection({ gallery }: { gallery: GalleryImage[] }) {
+  // Use up to 8 images from the gallery for the carousel
+  const carouselImages = gallery.slice(0, 8).map((img) => ({
+    url: img.url,
+    title: img.title,
+    label: img.category,
+  }));
+  if (carouselImages.length === 0) return null;
+  return (
+    <section className="relative overflow-hidden bg-background py-24 sm:py-32">
+      <div className="ambient-orb" style={{ width: 400, height: 400, background: "rgba(212,175,55,0.06)", top: "20%", left: "-5%" }} />
+      <div className="mx-auto mb-10 max-w-7xl px-6 text-center sm:px-10">
+        <Eyebrow className="mb-5 justify-center">In Motion</Eyebrow>
+        <RevealText text="A cinematic gallery" as="h2" className="font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.1] tracking-luxe text-foreground sm:text-6xl" />
+        <p className="mx-auto mt-4 max-w-lg font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">
+          Drag, scroll, or use arrow keys to explore.
+        </p>
+      </div>
+      <CircularGallery images={carouselImages} />
     </section>
   );
 }
@@ -559,7 +597,7 @@ function ReservationCinema({ settings, onReserve }: { settings: SiteSettings | n
           transition={{ duration: 0.8, delay: 0.55 }}
           className="mt-12 flex flex-wrap items-center justify-center gap-4"
         >
-          <LuxuryButton onClick={onReserve} className="min-h-[52px] text-sm">
+          <LuxuryButton onClick={onReserve} className="glow-border min-h-[52px] rounded-full text-sm">
             Reserve a Table <ArrowRight className="h-4 w-4" />
           </LuxuryButton>
           <a

@@ -9,6 +9,7 @@ import type { MenuCategory, MenuItem } from "@/lib/types";
 import { Eyebrow, OrnamentDivider, SpiceLevel, VegBadge } from "./primitives";
 import { RevealText } from "./motion";
 import { DishShowcase } from "./DishShowcase";
+import { OptionWheel } from "./OptionWheel";
 import { cn } from "@/lib/utils";
 
 type Group = { category: MenuCategory; items: MenuItem[] };
@@ -82,10 +83,19 @@ export function MenuView() {
         </div>
       </section>
 
-      {/* ============== STICKY CONTROLS — glass + sliding gold pill ============== */}
+      {/* ============== STICKY CONTROLS — desktop pills + mobile OptionWheel ============== */}
       <section className="sticky top-16 z-30 glass-cinema border-y border-white/[0.06]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+          {/* Mobile: OptionWheel for category selection */}
+          <div className="py-3 lg:hidden">
+            <OptionWheel
+              options={[{ value: "ALL", label: "All" }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
+              value={active}
+              onChange={(v) => setActive(v)}
+            />
+          </div>
+          {/* Desktop: category pills */}
+          <div className="hidden py-4 lg:flex lg:items-center lg:justify-between lg:gap-8">
             <div className="no-scrollbar -mx-1 flex items-center gap-1 overflow-x-auto px-1">
               <CategoryPill active={active === "ALL"} onClick={() => setActive("ALL")}>
                 All
