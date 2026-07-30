@@ -4,6 +4,7 @@ import { useRef, useState, type ReactNode, type MouseEvent } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { RevealText } from "./motion";
+import { useMagnetic } from "./premium-motion";
 
 /* =========================================================
    EYEBROW — small uppercase label with leading gold mark
@@ -68,13 +69,14 @@ export function SectionHeading({
    LUXURY BUTTON — gold gradient, glow, ripple, micro-interaction
    ========================================================= */
 export function LuxuryButton({
-  children, className, variant = "solid", onClick, type = "button", disabled,
+  children, className, variant = "solid", onClick, type = "button", disabled, magnetic = true,
 }: {
   children: ReactNode; className?: string; variant?: "solid" | "outline" | "ghost";
-  onClick?: () => void; type?: "button" | "submit"; disabled?: boolean;
+  onClick?: () => void; type?: "button" | "submit"; disabled?: boolean; magnetic?: boolean;
 }) {
   const [ripples, setRipples] = useState<{ x: number; y: number; id: number }[]>([]);
   const idRef = useRef(0);
+  const magRef = useMagnetic<HTMLButtonElement>({ strength: 0.25 });
 
   const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -92,7 +94,13 @@ export function LuxuryButton({
   } as const;
 
   return (
-    <button type={type} onClick={handleClick} disabled={disabled} className={cn(base, variants[variant], className)}>
+    <button
+      ref={magnetic ? magRef : undefined}
+      type={type}
+      onClick={handleClick}
+      disabled={disabled}
+      className={cn(base, variants[variant], className)}
+    >
       {ripples.map((r) => (
         <span key={r.id} className="ripple" style={{ left: r.x, top: r.y, width: 12, height: 12, marginLeft: -6, marginTop: -6 }} />
       ))}
