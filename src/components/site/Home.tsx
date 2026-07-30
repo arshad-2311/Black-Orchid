@@ -12,8 +12,8 @@ import type { MenuItem, GalleryImage, Testimonial, SiteSettings, MenuCategory } 
 import { Eyebrow, LuxuryButton, TextLink, OrnamentDivider, SpiceLevel, VegBadge } from "./primitives";
 import { RevealText, Parallax, ImageReveal, RevealGroup, RevealItem } from "./motion";
 import { Lightbox } from "./Lightbox";
-import { ScrollStack } from "./ScrollStack";
 import { CircularGallery } from "./CircularGallery";
+import { useFadeUp, useFadeScale, useParallax } from "./gsap-utils";
 import { cn } from "@/lib/utils";
 
 export function Home({ settings }: { settings: SiteSettings | null }) {
@@ -209,20 +209,23 @@ function SignatureDishes({
   items, categories, onViewMenu,
 }: { items: MenuItem[]; categories: MenuCategory[]; onViewMenu: () => void }) {
   const display = items.length > 0 ? items : categories.flatMap((c) => c.items).slice(0, 4);
+  const headerRef = useFadeUp<HTMLDivElement>({ duration: 0.7 });
+  const gridRef = useFadeScale<HTMLDivElement>({ stagger: 0.15, duration: 0.8 });
+
   return (
     <section className="relative bg-background py-32 sm:py-40">
       <div className="mx-auto max-w-7xl px-6 sm:px-10">
-        <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-end">
+        <div ref={headerRef} className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-end">
           <div>
             <Eyebrow className="mb-6">Signature Selections</Eyebrow>
             <RevealText text="Compositions by the Chef" as="h2" className="font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.1] tracking-luxe text-foreground sm:text-6xl" />
           </div>
-          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.3 }} className="hidden md:block">
+          <div className="hidden md:block">
             <TextLink onClick={onViewMenu}>View Full Menu</TextLink>
-          </motion.div>
+          </div>
         </div>
 
-        <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div ref={gridRef} className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {display.map((item, i) => (
             <DishCard key={item.id} item={item} index={i} onViewMenu={onViewMenu} />
           ))}
@@ -285,10 +288,13 @@ function DishCard({ item, index, onViewMenu }: { item: MenuItem; index: number; 
   );
 }
 
-/* ============== EXPERIENCE SCROLL STACK — cinematic pin & stack storytelling ============== */
+/* ============== EXPERIENCE SECTION — GSAP fade-up storytelling (no pinning) ============== */
 function ExperienceScrollStack({
   onReserve, onViewMenu, onBook,
 }: { onReserve: () => void; onViewMenu: () => void; onBook: () => void }) {
+  const headerRef = useFadeUp<HTMLDivElement>({ duration: 0.7 });
+  const gridRef = useFadeScale<HTMLDivElement>({ stagger: 0.15, duration: 0.8 });
+
   const cards = [
     {
       image: IMAGES.food[0],
@@ -323,17 +329,47 @@ function ExperienceScrollStack({
       cta: { label: "Reserve a Table", onClick: onReserve },
     },
   ];
+
   return (
-    <section className="relative bg-[#080808]">
-      <div className="mx-auto max-w-7xl px-6 pt-32 text-center sm:px-10">
-        <Eyebrow className="mb-6 justify-center">The Experience</Eyebrow>
-        <RevealText text="A journey through the evening" as="h2" className="font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.1] tracking-luxe text-foreground sm:text-6xl" />
-        <p className="mx-auto mt-5 max-w-xl font-[family-name:var(--font-cormorant)] text-xl italic text-muted-foreground">
-          Scroll to explore the moments that make Black Orchid unforgettable.
-        </p>
+    <section className="relative bg-[#080808] py-32 sm:py-40">
+      <div className="mx-auto max-w-7xl px-6 sm:px-10">
+        <div ref={headerRef} className="mx-auto max-w-2xl text-center">
+          <Eyebrow className="mb-6 justify-center">The Experience</Eyebrow>
+          <RevealText text="A journey through the evening" as="h2" className="font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.1] tracking-luxe text-foreground sm:text-6xl" />
+          <p className="mx-auto mt-5 max-w-xl font-[family-name:var(--font-cormorant)] text-xl italic text-muted-foreground">
+            The moments that make Black Orchid unforgettable.
+          </p>
+        </div>
+
+        <div ref={gridRef} className="mt-16 grid gap-6 sm:grid-cols-2">
+          {cards.map((card, i) => (
+            <ExperienceCard key={i} card={card} index={i} />
+          ))}
+        </div>
       </div>
-      <ScrollStack cards={cards} className="mt-16" />
     </section>
+  );
+}
+
+function ExperienceCard({ card, index }: { card: any; index: number }) {
+  return (
+    <div className="glow-border-hover group relative overflow-hidden rounded-[1.5rem] border border-white/[0.06] bg-card">
+      <div className="relative aspect-[16/10] overflow-hidden">
+        <img src={card.image} alt={card.alt} loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
+        <span className="absolute left-5 top-5 font-[family-name:var(--font-playfair)] text-5xl font-bold text-white/[0.08]">{String(index + 1).padStart(2, "0")}</span>
+      </div>
+      <div className="p-7">
+        <span className="font-sans text-[10px] uppercase tracking-[0.3em] text-gold/80">{card.eyebrow}</span>
+        <h3 className="mt-3 font-[family-name:var(--font-playfair)] text-2xl font-semibold text-foreground">{card.title}</h3>
+        <p className="mt-3 font-[family-name:var(--font-cormorant)] text-lg italic leading-relaxed text-muted-foreground">{card.description}</p>
+        {card.cta && (
+          <button onClick={card.cta.onClick} className="mt-5 inline-flex items-center gap-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-gold transition-colors hover:text-foreground">
+            {card.cta.label} <span>→</span>
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -423,26 +459,25 @@ function BanquetCinema({ settings, onBook }: { settings: SiteSettings | null; on
 function GalleryPreview({ images, onViewAll }: { images: GalleryImage[]; onViewAll: () => void }) {
   const [lbIndex, setLbIndex] = useState<number | null>(null);
   const preview = images.slice(0, 6);
+  const headerRef = useFadeUp<HTMLDivElement>({ duration: 0.7 });
+  const gridRef = useFadeScale<HTMLDivElement>({ stagger: 0.1, duration: 0.7 });
+
   return (
     <section className="bg-background py-32 sm:py-40">
       <div className="mx-auto max-w-7xl px-6 sm:px-10">
-        <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-end">
+        <div ref={headerRef} className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-end">
           <div>
             <Eyebrow className="mb-6">In Frame</Eyebrow>
             <RevealText text="A glimpse of Black Orchid" as="h2" className="font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.05] tracking-luxe text-foreground sm:text-6xl" />
           </div>
-          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.3 }}>
+          <div>
             <TextLink onClick={onViewAll}>View Full Gallery</TextLink>
-          </motion.div>
+          </div>
         </div>
-        <div className="mt-16 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div ref={gridRef} className="mt-16 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {preview.map((img, i) => (
-            <motion.button
+            <button
               key={img.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.7, delay: (i % 4) * 0.1, ease: [0.22, 1, 0.36, 1] }}
               onClick={() => setLbIndex(i)}
               className={cn("group relative overflow-hidden rounded-2xl", i === 0 || i === 5 ? "sm:row-span-2" : "")}
               style={{ aspectRatio: i === 0 || i === 5 ? "3/4" : "1/1" }}
@@ -453,14 +488,14 @@ function GalleryPreview({ images, onViewAll }: { images: GalleryImage[]; onViewA
                 <p className="font-[family-name:var(--font-playfair)] text-lg text-foreground">{img.title}</p>
                 <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-gold">{img.category}</p>
               </div>
-            </motion.button>
+            </button>
           ))}
         </div>
 
         {/* CTA — clear next step */}
-        <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.3 }} className="mt-14 flex justify-center">
+        <div className="mt-14 flex justify-center">
           <LuxuryButton variant="outline" onClick={onViewAll} className="min-h-[48px] text-sm">View Full Gallery <ArrowRight className="h-4 w-4" /></LuxuryButton>
-        </motion.div>
+        </div>
       </div>
       {lbIndex !== null && preview[lbIndex] && (
         <Lightbox images={preview} index={lbIndex} onClose={() => setLbIndex(null)} onNav={(d) => setLbIndex((p) => (p === null ? p : (p + d + preview.length) % preview.length))} />
@@ -569,11 +604,13 @@ function GoogleReviews() {
 
 /* ============== RESERVATION CTA — immersive floating ============== */
 function ReservationCinema({ settings, onReserve }: { settings: SiteSettings | null; onReserve: () => void }) {
+  const contentRef = useFadeUp<HTMLDivElement>({ duration: 0.8 });
+
   return (
     <section className="relative overflow-hidden bg-background py-32 sm:py-44">
       <div className="ambient-orb" style={{ width: 400, height: 400, background: "rgba(212,175,55,0.12)", top: "10%", left: "20%" }} />
       <div className="ambient-orb" style={{ width: 500, height: 500, background: "rgba(212,175,55,0.08)", bottom: "0%", right: "10%", animationDelay: "-6s" }} />
-      <div className="relative z-10 mx-auto max-w-3xl px-6 text-center">
+      <div ref={contentRef} className="relative z-10 mx-auto max-w-3xl px-6 text-center">
         <Eyebrow className="justify-center mb-7">Reserve Your Evening</Eyebrow>
         <RevealText
           text="An unforgettable experience awaits"
