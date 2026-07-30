@@ -1,13 +1,13 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, MotionValue } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 /**
  * ScrollStack — pins cards and stacks them elegantly while scrolling.
- * Each card sticks at the top of the viewport, and the next card slides over it
- * with a subtle scale + opacity transition.
+ * Each card sticks at the center of the viewport, and the next card slides
+ * over it with a subtle scale + opacity transition.
  *
  * Used only for storytelling sections (not everywhere).
  * Respects prefers-reduced-motion (renders as a simple stack).
@@ -38,22 +38,33 @@ export function ScrollStack({
     return () => mq.removeEventListener?.("change", onChange);
   }, []);
 
-  // Reduced motion: render as a simple vertical stack
   if (reducedMotion) {
     return (
       <div className={cn("space-y-8", className)}>
         {cards.map((card, i) => (
-          <StackCard key={i} card={card} index={i} total={cards.length} progress={0} />
+          <StackCard key={i} card={card} index={i} />
         ))}
       </div>
     );
   }
 
+  const total = cards.length;
+
   return (
-    <div ref={containerRef} className={cn("relative", className)} style={{ height: `${cards.length * 100}vh` }}>
-      <div className="sticky top-0 h-screen w-full overflow-hidden">
+    <div
+      ref={containerRef}
+      className={cn("relative", className)}
+      style={{ height: `${total * 100}vh` }}
+    >
+      <div className="sticky top-0 flex h-screen items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-10">
         {cards.map((card, i) => (
-          <StackCardWrapper key={i} card={card} index={i} total={cards.length} containerRef={containerRef} />
+          <StackCardWrapper
+            key={i}
+            card={card}
+            index={i}
+            total={total}
+            containerRef={containerRef}
+          />
         ))}
       </div>
     </div>
@@ -61,7 +72,10 @@ export function ScrollStack({
 }
 
 function StackCardWrapper({
-  card, index, total, containerRef,
+  card,
+  index,
+  total,
+  containerRef,
 }: {
   card: any;
   index: number;
@@ -70,31 +84,55 @@ function StackCardWrapper({
 }) {
   const { scrollYProgress } = useScroll({
     target: containerRef,
-    offset: ["start start", "end end"],
+    // Progress goes from 0 (container top hits viewport top) to 1 (container bottom hits viewport top)
+    offset: ["start start", "end start"],
   });
 
-  // Each card becomes visible/hidden based on scroll progress
-  // Card i is "active" between i/total and (i+1)/total
-  const start = index / total;
-  const end = (index + 1) / total;
+  // Each card is active during its slice of the scroll:
+  // Card i is fully visible at progress = i/total, fades out by (i+1)/total
+  const segmentStart = index / total;
+  const segmentEnd = (index + 1) / total;
 
-  const opacity = useTransform(scrollYProgress, [start - 0.1, start, end, end + 0.05], [0, 1, 1, 0]);
-  const scale = useTransform(scrollYProgress, [start, end], [1, 0.92]);
-  const y = useTransform(scrollYProgress, [start, end], [0, -40]);
-  // Cards behind get slightly dimmed
-  const filter = useTransform(scrollYProgress, [start, end], ["brightness(1)", "brightness(0.6)"]);
+  // Opacity: fade in just before this card's segment, fade out during transition to next
+  const fadeIn = Math.max(0, segmentStart - 0.05);
+  const fadeOut = segmentEnd - 0.05;
+  const fadeOutEnd = segmentEnd;
+
+  const opacity = useTransform(
+    scrollYProgress,
+    [fadeIn, segmentStart, fadeOut, fadeOutEnd],
+    [0, 1, 1, index < total - 1 ? 0 : 1]
+  );
+  // Scale: current card shrinks slightly as next card comes over it
+  const scale = useTransform(
+    scrollYProgress,
+    [segmentStart, segmentEnd],
+    [1, 0.92]
+  );
+  // Y offset: current card moves up slightly as next comes
+  const y = useTransform(
+    scrollYProgress,
+    [segmentStart, segmentEnd],
+    [0, -30]
+  );
+  // Dim cards that are behind the active one
+  const filter = useTransform(
+    scrollYProgress,
+    [segmentStart, segmentEnd],
+    ["brightness(1)", "brightness(0.5)"]
+  );
 
   return (
     <motion.div
       style={{ opacity, scale, y, filter }}
       className="absolute inset-0 flex items-center justify-center px-4 sm:px-6 lg:px-10"
     >
-      <StackCard card={card} index={index} total={total} progress={0} />
+      <StackCard card={card} index={index} />
     </motion.div>
   );
 }
 
-function StackCard({ card, index, total }: { card: any; index: number; total: number; progress: number }) {
+function StackCard({ card, index }: { card: any; index: number }) {
   return (
     <div className="relative w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/[0.06] bg-card shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)]">
       <div className="grid lg:grid-cols-2">
