@@ -135,6 +135,7 @@ export function CircularGallery({
           }
         }}
         className="no-scrollbar flex cursor-grab gap-4 overflow-x-auto px-[10%] py-8 active:cursor-grabbing sm:gap-6 sm:px-[15%] lg:px-[20%]"
+        data-cursor="drag"
         style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch" }}
       >
         {items.map((img, i) => {

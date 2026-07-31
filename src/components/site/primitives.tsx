@@ -69,10 +69,10 @@ export function SectionHeading({
    LUXURY BUTTON — gold gradient, glow, ripple, micro-interaction
    ========================================================= */
 export function LuxuryButton({
-  children, className, variant = "solid", onClick, type = "button", disabled, magnetic = true,
+  children, className, variant = "solid", onClick, type = "button", disabled, magnetic = true, cursorLabel,
 }: {
   children: ReactNode; className?: string; variant?: "solid" | "outline" | "ghost";
-  onClick?: () => void; type?: "button" | "submit"; disabled?: boolean; magnetic?: boolean;
+  onClick?: () => void; type?: "button" | "submit"; disabled?: boolean; magnetic?: boolean; cursorLabel?: string;
 }) {
   const [ripples, setRipples] = useState<{ x: number; y: number; id: number }[]>([]);
   const idRef = useRef(0);
@@ -99,6 +99,7 @@ export function LuxuryButton({
       type={type}
       onClick={handleClick}
       disabled={disabled}
+      data-cursor-label={cursorLabel || undefined}
       className={cn(base, variants[variant], className)}
     >
       {ripples.map((r) => (

@@ -112,10 +112,10 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
           transition={{ delay: 3, duration: 0.9 }}
           className="mt-12 flex flex-wrap items-center justify-center gap-4"
         >
-          <LuxuryButton onClick={() => setView("reservation")} className="min-h-[52px] text-sm">
+          <LuxuryButton onClick={() => setView("reservation")} className="min-h-[52px] text-sm" cursorLabel="Reserve">
             Reserve a Table <ArrowRight className="h-4 w-4" />
           </LuxuryButton>
-          <LuxuryButton variant="outline" onClick={() => setView("menu")} className="min-h-[52px] text-sm">
+          <LuxuryButton variant="outline" onClick={() => setView("menu")} className="min-h-[52px] text-sm" cursorLabel="Menu">
             Explore Menu
           </LuxuryButton>
         </motion.div>
@@ -252,6 +252,7 @@ function DishCard({ item, index, onViewMenu }: { item: MenuItem; index: number; 
       onMouseLeave={() => setHover(false)}
       onClick={onViewMenu}
       aria-label={`${item.name} — $${item.price}. ${item.veg ? "Vegetarian" : "Non-vegetarian"}. View in menu.`}
+      data-cursor-label="View"
       className="glow-border-hover group relative w-full overflow-hidden rounded-[1.5rem] border border-white/[0.06] bg-card text-left"
     >
       <div className="relative aspect-[4/5] overflow-hidden">

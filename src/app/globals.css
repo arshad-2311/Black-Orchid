@@ -335,10 +335,16 @@
   pointer-events: none;
   z-index: 9999;
   border-radius: 9999px;
-  mix-blend-mode: difference;
+  will-change: transform;
 }
 .cursor-dot { width: 6px; height: 6px; background: #d4af37; }
-.cursor-ring { width: 36px; height: 36px; border: 1px solid rgba(212,175,55,0.6); transition: width 0.25s ease, height 0.25s ease, background 0.25s ease, border-color 0.25s ease; }
+.cursor-ring {
+  width: 36px; height: 36px;
+  border: 1px solid rgba(212,175,55,0.5);
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.25s ease, background-color 0.25s ease;
+  will-change: transform, width, height;
+}
 @media (pointer: coarse) {
   .cursor-dot, .cursor-ring { display: none; }
 }
