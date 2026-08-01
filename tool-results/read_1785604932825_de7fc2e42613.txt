@@ -1,0 +1,661 @@
+     1→"use client";
+     2→
+     3→import { useEffect, useMemo, useRef, useState } from "react";
+     4→import {
+     5→  motion, AnimatePresence, useScroll, useTransform,
+     6→} from "framer-motion";
+     7→import { ArrowRight, Star, Quote, UtensilsCrossed, Music, Users, Award } from "lucide-react";
+     8→import { useApp } from "@/lib/store";
+     9→import { apiGet } from "@/lib/api";
+    10→import { IMAGES } from "@/lib/images";
+    11→import type { MenuItem, GalleryImage, Testimonial, SiteSettings, MenuCategory } from "@/lib/types";
+    12→import { Eyebrow, LuxuryButton, TextLink, OrnamentDivider, SpiceLevel, VegBadge } from "./primitives";
+    13→import { RevealText, Parallax, ImageReveal, RevealGroup, RevealItem } from "./motion";
+    14→import { Lightbox } from "./Lightbox";
+    15→import { CircularGallery } from "./CircularGallery";
+    16→import { useFadeUp, useFadeScale, useParallax } from "./gsap-utils";
+    17→import { cn } from "@/lib/utils";
+    18→
+    19→export function Home({ settings }: { settings: SiteSettings | null }) {
+    20→  const { setView } = useApp();
+    21→  const [categories, setCategories] = useState<MenuCategory[]>([]);
+    22→  const [gallery, setGallery] = useState<GalleryImage[]>([]);
+    23→  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+    24→
+    25→  useEffect(() => {
+    26→    apiGet<MenuCategory[]>("/api/menu").then(setCategories).catch(() => {});
+    27→    apiGet<GalleryImage[]>("/api/gallery").then(setGallery).catch(() => {});
+    28→    apiGet<Testimonial[]>("/api/testimonials?featured=1").then(setTestimonials).catch(() => {});
+    29→  }, []);
+    30→
+    31→  const featuredItems = useMemo(
+    32→    () => categories.flatMap((c) => c.items).filter((i) => i.featured).slice(0, 4),
+    33→    [categories]
+    34→  );
+    35→
+    36→  return (
+    37→    <div className="overflow-hidden">
+    38→      <Hero settings={settings} />
+    39→      <SignatureDishes items={featuredItems} categories={categories} onViewMenu={() => setView("menu")} />
+    40→      <Story settings={settings} onReserve={() => setView("reservation")} />
+    41→      <ExperienceScrollStack onReserve={() => setView("reservation")} onViewMenu={() => setView("menu")} onBook={() => setView("banquet")} />
+    42→      <GalleryPreview images={gallery} onViewAll={() => setView("gallery")} />
+    43→      <BanquetCinema settings={settings} onBook={() => setView("banquet")} />
+    44→      <CircularGallerySection gallery={gallery} />
+    45→      <TestimonialCinema testimonials={testimonials} />
+    46→      <GoogleReviews />
+    47→      <ReservationCinema settings={settings} onReserve={() => setView("reservation")} />
+    48→    </div>
+    49→  );
+    50→}
+    51→
+    52→/* ============== HERO — cinematic video + word reveal + ambient light ============== */
+    53→function Hero({ settings }: { settings: SiteSettings | null }) {
+    54→  const { setView } = useApp();
+    55→  const ref = useRef<HTMLElement | null>(null);
+    56→  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+    57→  const y = useTransform(scrollYProgress, [0, 1], [0, 200]);
+    58→  const opacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
+    59→  const scale = useTransform(scrollYProgress, [0, 1], [1, 1.15]);
+    60→  const poster = IMAGES.hero[0];
+    61→
+    62→  return (
+    63→    <section ref={ref} className="relative flex h-[100svh] min-h-[100svh] w-screen items-center justify-center overflow-hidden cinematic-grain">
+    64→      {/* Video background */}
+    65→      <motion.div style={{ scale }} className="absolute inset-0">
+    66→        <video
+    67→          className="h-full w-full object-cover object-center"
+    68→          autoPlay muted loop playsInline preload="auto" poster={poster}
+    69→          disablePictureInPicture controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
+    70→          aria-hidden tabIndex={-1}
+    71→          onContextMenu={(e) => e.preventDefault()}
+    72→        >
+    73→          <source src="/hero-video.mp4" type="video/mp4" />
+    74→        </video>
+    75→      </motion.div>
+    76→
+    77→      {/* Ambient floating gold orbs */}
+    78→      <div className="ambient-orb" style={{ width: 400, height: 400, background: "rgba(212,175,55,0.18)", top: "15%", left: "5%" }} />
+    79→      <div className="ambient-orb" style={{ width: 500, height: 500, background: "rgba(212,175,55,0.10)", bottom: "10%", right: "5%", animationDelay: "-5s" }} />
+    80→
+    81→      {/* Overlays */}
+    82→      <div className="absolute inset-0 bg-background/55" />
+    83→      <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-transparent to-background" />
+    84→      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 30%, rgba(10,10,10,0.8) 100%)" }} />
+    85→
+    86→      {/* Content */}
+    87→      <motion.div style={{ y, opacity }} className="relative z-10 mx-auto max-w-5xl px-6 text-center">
+    88→        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6, duration: 1 }}>
+    89→          <Eyebrow className="justify-center">{settings?.tagline || "Fine Dining & Banquet"}</Eyebrow>
+    90→        </motion.div>
+    91→
+    92→        <RevealText
+    93→          text={settings?.heroTitle || "An Exquisite Symphony of Flavour"}
+    94→          as="h1"
+    95→          stagger={0.08}
+    96→          delay={1.8}
+    97→          className="mt-8 font-[family-name:var(--font-playfair)] text-5xl font-semibold leading-[1.02] tracking-luxe text-foreground drop-shadow-[0_4px_30px_rgba(10,10,10,0.6)] sm:text-7xl lg:text-[5.5rem]"
+    98→        />
+    99→
+   100→        <motion.p
+   101→          initial={{ opacity: 0, y: 16 }}
+   102→          animate={{ opacity: 1, y: 0 }}
+   103→          transition={{ delay: 2.6, duration: 1 }}
+   104→          className="mx-auto mt-8 max-w-xl font-[family-name:var(--font-cormorant)] text-xl italic text-foreground/85 drop-shadow-[0_2px_16px_rgba(10,10,10,0.6)] sm:text-2xl"
+   105→        >
+   106→          {settings?.heroSubtitle}
+   107→        </motion.p>
+   108→
+   109→        <motion.div
+   110→          initial={{ opacity: 0, y: 16 }}
+   111→          animate={{ opacity: 1, y: 0 }}
+   112→          transition={{ delay: 3, duration: 0.9 }}
+   113→          className="mt-12 flex flex-wrap items-center justify-center gap-4"
+   114→        >
+   115→          <LuxuryButton onClick={() => setView("reservation")} className="min-h-[52px] text-sm" cursorLabel="Reserve">
+   116→            Reserve a Table <ArrowRight className="h-4 w-4" />
+   117→          </LuxuryButton>
+   118→          <LuxuryButton variant="outline" onClick={() => setView("menu")} className="min-h-[52px] text-sm" cursorLabel="Menu">
+   119→            Explore Menu
+   120→          </LuxuryButton>
+   121→        </motion.div>
+   122→
+   123→        {/* Trust indicators — answer "why choose us" instantly */}
+   124→        <motion.ul
+   125→          initial={{ opacity: 0, y: 12 }}
+   126→          animate={{ opacity: 1, y: 0 }}
+   127→          transition={{ delay: 3.4, duration: 0.9 }}
+   128→          className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-foreground/70"
+   129→          aria-label="Trust indicators"
+   130→        >
+   131→          <li className="flex items-center gap-1.5 text-sm">
+   132→            <span className="flex items-center gap-0.5 text-gold" aria-hidden>
+   133→              {Array.from({ length: 5 }).map((_, i) => <Star key={i} className="h-3.5 w-3.5 fill-gold" />)}
+   134→            </span>
+   135→            <span className="font-sans text-xs tracking-wide">4.8 Google Rating</span>
+   136→          </li>
+   137→          <li className="hidden h-3 w-px bg-white/15 sm:block" aria-hidden />
+   138→          <li className="flex items-center gap-1.5 font-sans text-xs tracking-wide"><Award className="h-3.5 w-3.5 text-gold" aria-hidden /> Premium Fine Dining</li>
+   139→          <li className="hidden h-3 w-px bg-white/15 sm:block" aria-hidden />
+   140→          <li className="flex items-center gap-1.5 font-sans text-xs tracking-wide"><Users className="h-3.5 w-3.5 text-gold" aria-hidden /> Banquet Available</li>
+   141→          <li className="hidden h-3 w-px bg-white/15 sm:block" aria-hidden />
+   142→          <li className="flex items-center gap-1.5 font-sans text-xs tracking-wide"><Music className="h-3.5 w-3.5 text-gold" aria-hidden /> Live Music</li>
+   143→          <li className="hidden h-3 w-px bg-white/15 sm:block" aria-hidden />
+   144→          <li className="flex items-center gap-1.5 font-sans text-xs tracking-wide"><UtensilsCrossed className="h-3.5 w-3.5 text-gold" aria-hidden /> Family Friendly</li>
+   145→        </motion.ul>
+   146→      </motion.div>
+   147→    </section>
+   148→  );
+   149→}
+   150→
+   151→/* ============== STORY — asymmetric parallax image + editorial text ============== */
+   152→function Story({ settings, onReserve }: { settings: SiteSettings | null; onReserve: () => void }) {
+   153→  const { setView } = useApp();
+   154→  return (
+   155→    <section className="relative bg-background py-32 sm:py-40">
+   156→      <div className="mx-auto grid max-w-7xl items-center gap-16 px-6 sm:px-10 lg:grid-cols-12 lg:gap-24">
+   157→        {/* Image — parallax, offset column */}
+   158→        <div className="lg:col-span-5 lg:col-start-1">
+   159→          <Parallax speed={0.15}>
+   160→            <ImageReveal src={IMAGES.interior[0]} alt="Black Orchid restaurant interior with warm lighting" rounded="rounded-[2rem]" className="aspect-[4/5]" />
+   161→          </Parallax>
+   162→          {/* Floating stat card */}
+   163→          <motion.div
+   164→            initial={{ opacity: 0, y: 30 }}
+   165→            whileInView={{ opacity: 1, y: 0 }}
+   166→            viewport={{ once: true, margin: "-50px" }}
+   167→            transition={{ duration: 0.7, delay: 0.3 }}
+   168→            className="glass-gold-cinema relative z-10 -mt-16 ml-auto w-max rounded-2xl px-8 py-6 text-center lg:-mr-8"
+   169→          >
+   170→            <p className="font-[family-name:var(--font-playfair)] text-5xl font-semibold text-gold-gradient">20+</p>
+   171→            <p className="mt-1 font-sans text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Years of Legacy</p>
+   172→          </motion.div>
+   173→        </div>
+   174→
+   175→        {/* Text — offset column */}
+   176→        <div className="lg:col-span-6 lg:col-start-7">
+   177→          <Eyebrow className="mb-7">{settings?.aboutTitle || "Our Story"}</Eyebrow>
+   178→          <RevealText
+   179→            text="A Sanctuary of Culinary Art"
+   180→            as="h2"
+   181→            className="font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.1] tracking-luxe text-foreground sm:text-6xl"
+   182→          />
+   183→          <OrnamentDivider className="my-8 !justify-start" />
+   184→          <RevealGroup className="max-w-[700px] space-y-5">
+   185→            <RevealItem>
+   186→              <p className="font-[family-name:var(--font-cormorant)] text-xl leading-relaxed text-foreground/80 sm:text-2xl">
+   187→                {settings?.aboutBody}
+   188→              </p>
+   189→            </RevealItem>
+   190→            <RevealItem>
+   191→              <p className="font-[family-name:var(--font-cormorant)] text-xl leading-relaxed text-foreground/80 sm:text-2xl">
+   192→                Every plate tells a story. Every visit, a chapter. We do not merely serve meals — we compose experiences, each a fleeting masterpiece.
+   193→              </p>
+   194→            </RevealItem>
+   195→          </RevealGroup>
+   196→          {/* Dual CTA — clear next steps */}
+   197→          <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.4 }} className="mt-10 flex flex-wrap items-center gap-5">
+   198→            <LuxuryButton onClick={onReserve} className="min-h-[48px] text-sm">Reserve a Table <ArrowRight className="h-4 w-4" /></LuxuryButton>
+   199→            <TextLink onClick={() => setView("about")}>Read Our Story</TextLink>
+   200→          </motion.div>
+   201→        </div>
+   202→      </div>
+   203→    </section>
+   204→  );
+   205→}
+   206→
+   207→/* ============== SIGNATURE DISHES — staggered editorial cards ============== */
+   208→function SignatureDishes({
+   209→  items, categories, onViewMenu,
+   210→}: { items: MenuItem[]; categories: MenuCategory[]; onViewMenu: () => void }) {
+   211→  const display = items.length > 0 ? items : categories.flatMap((c) => c.items).slice(0, 4);
+   212→  const headerRef = useFadeUp<HTMLDivElement>({ duration: 0.7 });
+   213→  const gridRef = useFadeScale<HTMLDivElement>({ stagger: 0.15, duration: 0.8 });
+   214→
+   215→  return (
+   216→    <section className="relative bg-background py-32 sm:py-40">
+   217→      <div className="mx-auto max-w-7xl px-6 sm:px-10">
+   218→        <div ref={headerRef} className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-end">
+   219→          <div>
+   220→            <Eyebrow className="mb-6">Signature Selections</Eyebrow>
+   221→            <RevealText text="Compositions by the Chef" as="h2" className="font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.1] tracking-luxe text-foreground sm:text-6xl" />
+   222→          </div>
+   223→          <div className="hidden md:block">
+   224→            <TextLink onClick={onViewMenu}>View Full Menu</TextLink>
+   225→          </div>
+   226→        </div>
+   227→
+   228→        <div ref={gridRef} className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+   229→          {display.map((item, i) => (
+   230→            <DishCard key={item.id} item={item} index={i} onViewMenu={onViewMenu} />
+   231→          ))}
+   232→        </div>
+   233→
+   234→        {/* CTA — clear next step */}
+   235→        <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.3 }} className="mt-14 flex justify-center">
+   236→          <LuxuryButton onClick={onViewMenu} className="min-h-[48px] text-sm">View Full Menu <ArrowRight className="h-4 w-4" /></LuxuryButton>
+   237→        </motion.div>
+   238→      </div>
+   239→    </section>
+   240→  );
+   241→}
+   242→
+   243→function DishCard({ item, index, onViewMenu }: { item: MenuItem; index: number; onViewMenu: () => void }) {
+   244→  const [hover, setHover] = useState(false);
+   245→  return (
+   246→    <motion.button
+   247→      initial={{ opacity: 0, y: 40 }}
+   248→      whileInView={{ opacity: 1, y: 0 }}
+   249→      viewport={{ once: true, margin: "-60px" }}
+   250→      transition={{ duration: 0.7, delay: index * 0.12, ease: [0.22, 1, 0.36, 1] }}
+   251→      onMouseEnter={() => setHover(true)}
+   252→      onMouseLeave={() => setHover(false)}
+   253→      onClick={onViewMenu}
+   254→      aria-label={`${item.name} — $${item.price}. ${item.veg ? "Vegetarian" : "Non-vegetarian"}. View in menu.`}
+   255→      data-cursor-label="View"
+   256→      className="glow-border-hover group relative w-full overflow-hidden rounded-[1.5rem] border border-white/[0.06] bg-card text-left"
+   257→    >
+   258→      <div className="relative aspect-[4/5] overflow-hidden">
+   259→        {item.image && (
+   260→          <img src={item.image} alt={`${item.name} — ${item.shortDescription || item.description}`} loading="lazy" className="h-full w-full object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-110" />
+   261→        )}
+   262→        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
+   263→        {/* Price floating */}
+   264→        <motion.div
+   265→          animate={{ y: hover ? 0 : 8, opacity: hover ? 1 : 0.9 }}
+   266→          className="glass-gold-cinema absolute right-4 top-4 rounded-full px-3.5 py-1.5"
+   267→        >
+   268→          <span className="font-[family-name:var(--font-playfair)] text-base font-semibold text-gold">${item.price}</span>
+   269→        </motion.div>
+   270→        {/* Badges */}
+   271→        <div className="absolute left-4 top-4 flex items-center gap-2">
+   272→          <VegBadge veg={item.veg} />
+   273→          <SpiceLevel level={item.spice} />
+   274→        </div>
+   275→      </div>
+   276→      <div className="absolute bottom-0 left-0 right-0 p-6">
+   277→        <p className="font-sans text-[10px] uppercase tracking-[0.25em] text-gold/80">{item.categoryId}</p>
+   278→        <h3 className="mt-1.5 font-[family-name:var(--font-playfair)] text-2xl font-semibold text-foreground">{item.name}</h3>
+   279→        <motion.p
+   280→          initial={false}
+   281→          animate={{ height: hover ? "auto" : 0, opacity: hover ? 1 : 0, marginTop: hover ? 8 : 0 }}
+   282→          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+   283→          className="overflow-hidden font-[family-name:var(--font-cormorant)] text-lg italic text-foreground/70"
+   284→        >
+   285→          {item.shortDescription || item.description}
+   286→        </motion.p>
+   287→      </div>
+   288→    </motion.button>
+   289→  );
+   290→}
+   291→
+   292→/* ============== EXPERIENCE SECTION — GSAP fade-up storytelling (no pinning) ============== */
+   293→function ExperienceScrollStack({
+   294→  onReserve, onViewMenu, onBook,
+   295→}: { onReserve: () => void; onViewMenu: () => void; onBook: () => void }) {
+   296→  const headerRef = useFadeUp<HTMLDivElement>({ duration: 0.7 });
+   297→  const gridRef = useFadeScale<HTMLDivElement>({ stagger: 0.15, duration: 0.8 });
+   298→
+   299→  const cards = [
+   300→    {
+   301→      image: IMAGES.food[0],
+   302→      alt: "Signature dish plated with precision",
+   303→      eyebrow: "Signature Dishes",
+   304→      title: "Composed to Perfection",
+   305→      description: "Each dish is a study in restraint and luxury — sourced at dawn, plated with devotion, served as theatre.",
+   306→      cta: { label: "Explore Menu", onClick: onViewMenu },
+   307→    },
+   308→    {
+   309→      image: IMAGES.interior[0],
+   310→      alt: "Luxury restaurant interior with warm lighting",
+   311→      eyebrow: "Restaurant Experience",
+   312→      title: "An Evening, Composed",
+   313→      description: "Crystal chandeliers, velvet booths, and a soundtrack curated for the senses. Every visit is a chapter.",
+   314→      cta: { label: "Reserve a Table", onClick: onReserve },
+   315→    },
+   316→    {
+   317→      image: IMAGES.banquet[1],
+   318→      alt: "Grand banquet hall set for celebration",
+   319→      eyebrow: "Banquet Experience",
+   320→      title: "Celebrations of Distinction",
+   321→      description: "A grand hall, a dedicated team, and a menu sculpted for your milestone. Weddings, galas, and legends.",
+   322→      cta: { label: "Book the Banquet", onClick: onBook },
+   323→    },
+   324→    {
+   325→      image: IMAGES.interior[3],
+   326→      alt: "Intimate private dining room",
+   327→      eyebrow: "Private Dining",
+   328→      title: "Reserved for the Few",
+   329→      description: "An intimate room for the discerning few. Bespoke menus, discreet service, and an evening yours alone.",
+   330→      cta: { label: "Reserve a Table", onClick: onReserve },
+   331→    },
+   332→  ];
+   333→
+   334→  return (
+   335→    <section className="relative bg-[#080808] py-32 sm:py-40">
+   336→      <div className="mx-auto max-w-7xl px-6 sm:px-10">
+   337→        <div ref={headerRef} className="mx-auto max-w-2xl text-center">
+   338→          <Eyebrow className="mb-6 justify-center">The Experience</Eyebrow>
+   339→          <RevealText text="A journey through the evening" as="h2" className="font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.1] tracking-luxe text-foreground sm:text-6xl" />
+   340→          <p className="mx-auto mt-5 max-w-xl font-[family-name:var(--font-cormorant)] text-xl italic text-muted-foreground">
+   341→            The moments that make Black Orchid unforgettable.
+   342→          </p>
+   343→        </div>
+   344→
+   345→        <div ref={gridRef} className="mt-16 grid gap-6 sm:grid-cols-2">
+   346→          {cards.map((card, i) => (
+   347→            <ExperienceCard key={i} card={card} index={i} />
+   348→          ))}
+   349→        </div>
+   350→      </div>
+   351→    </section>
+   352→  );
+   353→}
+   354→
+   355→function ExperienceCard({ card, index }: { card: any; index: number }) {
+   356→  return (
+   357→    <div className="glow-border-hover group relative overflow-hidden rounded-[1.5rem] border border-white/[0.06] bg-card">
+   358→      <div className="relative aspect-[16/10] overflow-hidden">
+   359→        <img src={card.image} alt={card.alt} loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+   360→        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
+   361→        <span className="absolute left-5 top-5 font-[family-name:var(--font-playfair)] text-5xl font-bold text-white/[0.08]">{String(index + 1).padStart(2, "0")}</span>
+   362→      </div>
+   363→      <div className="p-7">
+   364→        <span className="font-sans text-[10px] uppercase tracking-[0.3em] text-gold/80">{card.eyebrow}</span>
+   365→        <h3 className="mt-3 font-[family-name:var(--font-playfair)] text-2xl font-semibold text-foreground">{card.title}</h3>
+   366→        <p className="mt-3 font-[family-name:var(--font-cormorant)] text-lg italic leading-relaxed text-muted-foreground">{card.description}</p>
+   367→        {card.cta && (
+   368→          <button onClick={card.cta.onClick} className="mt-5 inline-flex items-center gap-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-gold transition-colors hover:text-foreground">
+   369→            {card.cta.label} <span>→</span>
+   370→          </button>
+   371→        )}
+   372→      </div>
+   373→    </div>
+   374→  );
+   375→}
+   376→
+   377→/* ============== CIRCULAR GALLERY — premium infinite horizontal carousel ============== */
+   378→function CircularGallerySection({ gallery }: { gallery: GalleryImage[] }) {
+   379→  // Use up to 8 images from the gallery for the carousel
+   380→  const carouselImages = gallery.slice(0, 8).map((img) => ({
+   381→    url: img.url,
+   382→    title: img.title,
+   383→    label: img.category,
+   384→  }));
+   385→  if (carouselImages.length === 0) return null;
+   386→  return (
+   387→    <section className="relative overflow-hidden bg-background py-24 sm:py-32">
+   388→      <div className="ambient-orb" style={{ width: 400, height: 400, background: "rgba(212,175,55,0.06)", top: "20%", left: "-5%" }} />
+   389→      <div className="mx-auto mb-10 max-w-7xl px-6 text-center sm:px-10">
+   390→        <Eyebrow className="mb-5 justify-center">In Motion</Eyebrow>
+   391→        <RevealText text="A cinematic gallery" as="h2" className="font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.1] tracking-luxe text-foreground sm:text-6xl" />
+   392→        <p className="mx-auto mt-4 max-w-lg font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">
+   393→          Drag, scroll, or use arrow keys to explore.
+   394→        </p>
+   395→      </div>
+   396→      <CircularGallery images={carouselImages} />
+   397→    </section>
+   398→  );
+   399→}
+   400→
+   401→/* ============== BANQUET CINEMA — full-width parallax banner ============== */
+   402→function BanquetCinema({ settings, onBook }: { settings: SiteSettings | null; onBook: () => void }) {
+   403→  const ref = useRef<HTMLDivElement | null>(null);
+   404→  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+   405→  const y = useTransform(scrollYProgress, [0, 1], ["-15%", "15%"]);
+   406→  const scale = useTransform(scrollYProgress, [0, 0.5, 1], [1.15, 1, 1.15]);
+   407→
+   408→  return (
+   409→    <section ref={ref} className="relative flex h-[100vh] min-h-[600px] items-center overflow-hidden">
+   410→      <motion.div style={{ y, scale }} className="absolute inset-0">
+   411→        <img src={IMAGES.banquet[1]} alt="Grand banquet hall with elegant table settings and warm lighting" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+   412→      </motion.div>
+   413→      <div className="absolute inset-0 bg-gradient-to-r from-background via-background/75 to-background/20" />
+   414→      <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-background/40" />
+   415→
+   416→      <div className="relative z-10 mx-auto w-full max-w-7xl px-6 sm:px-10">
+   417→        <div className="max-w-xl">
+   418→          <Eyebrow className="mb-6">Banquet Facility</Eyebrow>
+   419→          <RevealText
+   420→            text="Celebrations worthy of legend"
+   421→            as="h2"
+   422→            className="font-[family-name:var(--font-playfair)] text-5xl font-semibold leading-[1.02] tracking-luxe text-foreground sm:text-7xl"
+   423→          />
+   424→          <motion.p
+   425→            initial={{ opacity: 0, y: 20 }}
+   426→            whileInView={{ opacity: 1, y: 0 }}
+   427→            viewport={{ once: true, margin: "-60px" }}
+   428→            transition={{ duration: 0.8, delay: 0.3 }}
+   429→            className="mt-7 max-w-lg font-[family-name:var(--font-cormorant)] text-xl italic leading-relaxed text-muted-foreground sm:text-2xl"
+   430→          >
+   431→            {settings?.banquetDesc}
+   432→          </motion.p>
+   433→          <motion.div
+   434→            initial={{ opacity: 0, y: 20 }}
+   435→            whileInView={{ opacity: 1, y: 0 }}
+   436→            viewport={{ once: true, margin: "-60px" }}
+   437→            transition={{ duration: 0.8, delay: 0.5 }}
+   438→            className="mt-8 flex flex-wrap items-center gap-8"
+   439→          >
+   440→            <div><p className="font-sans text-[10px] uppercase tracking-[0.25em] text-gold/70">Capacity</p><p className="mt-1 font-[family-name:var(--font-playfair)] text-2xl text-foreground">{settings?.banquetCapacity}</p></div>
+   441→            <div className="h-10 w-px bg-white/15" />
+   442→            <div><p className="font-sans text-[10px] uppercase tracking-[0.25em] text-gold/70">Amenities</p><p className="mt-1 font-[family-name:var(--font-playfair)] text-2xl text-foreground">Valet · Stage · DJ</p></div>
+   443→          </motion.div>
+   444→          <motion.div
+   445→            initial={{ opacity: 0, y: 20 }}
+   446→            whileInView={{ opacity: 1, y: 0 }}
+   447→            viewport={{ once: true, margin: "-60px" }}
+   448→            transition={{ duration: 0.8, delay: 0.6 }}
+   449→            className="mt-10"
+   450→          >
+   451→            <LuxuryButton onClick={onBook}>Book the Banquet <ArrowRight className="h-4 w-4" /></LuxuryButton>
+   452→          </motion.div>
+   453→        </div>
+   454→      </div>
+   455→    </section>
+   456→  );
+   457→}
+   458→
+   459→/* ============== GALLERY PREVIEW — masonry with reveals ============== */
+   460→function GalleryPreview({ images, onViewAll }: { images: GalleryImage[]; onViewAll: () => void }) {
+   461→  const [lbIndex, setLbIndex] = useState<number | null>(null);
+   462→  const preview = images.slice(0, 6);
+   463→  const headerRef = useFadeUp<HTMLDivElement>({ duration: 0.7 });
+   464→  const gridRef = useFadeScale<HTMLDivElement>({ stagger: 0.1, duration: 0.7 });
+   465→
+   466→  return (
+   467→    <section className="bg-background py-32 sm:py-40">
+   468→      <div className="mx-auto max-w-7xl px-6 sm:px-10">
+   469→        <div ref={headerRef} className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-end">
+   470→          <div>
+   471→            <Eyebrow className="mb-6">In Frame</Eyebrow>
+   472→            <RevealText text="A glimpse of Black Orchid" as="h2" className="font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.05] tracking-luxe text-foreground sm:text-6xl" />
+   473→          </div>
+   474→          <div>
+   475→            <TextLink onClick={onViewAll}>View Full Gallery</TextLink>
+   476→          </div>
+   477→        </div>
+   478→        <div ref={gridRef} className="mt-16 grid grid-cols-2 gap-4 sm:grid-cols-4">
+   479→          {preview.map((img, i) => (
+   480→            <button
+   481→              key={img.id}
+   482→              onClick={() => setLbIndex(i)}
+   483→              className={cn("group relative overflow-hidden rounded-2xl", i === 0 || i === 5 ? "sm:row-span-2" : "")}
+   484→              style={{ aspectRatio: i === 0 || i === 5 ? "3/4" : "1/1" }}
+   485→            >
+   486→              <img src={img.url} alt={`${img.title} — ${img.category}`} loading="lazy" className="h-full w-full object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-110" />
+   487→              <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+   488→              <div className="absolute bottom-0 left-0 right-0 translate-y-4 p-5 text-left opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
+   489→                <p className="font-[family-name:var(--font-playfair)] text-lg text-foreground">{img.title}</p>
+   490→                <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-gold">{img.category}</p>
+   491→              </div>
+   492→            </button>
+   493→          ))}
+   494→        </div>
+   495→
+   496→        {/* CTA — clear next step */}
+   497→        <div className="mt-14 flex justify-center">
+   498→          <LuxuryButton variant="outline" onClick={onViewAll} className="min-h-[48px] text-sm">View Full Gallery <ArrowRight className="h-4 w-4" /></LuxuryButton>
+   499→        </div>
+   500→      </div>
+   501→      {lbIndex !== null && preview[lbIndex] && (
+   502→        <Lightbox images={preview} index={lbIndex} onClose={() => setLbIndex(null)} onNav={(d) => setLbIndex((p) => (p === null ? p : (p + d + preview.length) % preview.length))} />
+   503→      )}
+   504→    </section>
+   505→  );
+   506→}
+   507→
+   508→/* ============== TESTIMONIAL CINEMA — single dramatic quote ============== */
+   509→function TestimonialCinema({ testimonials }: { testimonials: Testimonial[] }) {
+   510→  const [idx, setIdx] = useState(0);
+   511→  const list = testimonials;
+   512→  useEffect(() => {
+   513→    if (!list.length) return;
+   514→    const t = setInterval(() => setIdx((i) => (i + 1) % list.length), 7000);
+   515→    return () => clearInterval(t);
+   516→  }, [list.length]);
+   517→  if (!list.length) return null;
+   518→  const t = list[idx];
+   519→
+   520→  return (
+   521→    <section className="relative overflow-hidden bg-[#080808] py-32 sm:py-44">
+   522→      <div className="ambient-orb" style={{ width: 450, height: 450, background: "rgba(212,175,55,0.08)", top: "20%", left: "30%" }} />
+   523→      <div className="mx-auto max-w-4xl px-6 text-center">
+   524→        <Quote className="mx-auto h-12 w-12 text-gold/30" />
+   525→        <div className="mt-8 min-h-[280px] sm:min-h-[240px]">
+   526→          <AnimatePresence mode="wait">
+   527→            <motion.figure key={t.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.6 }}>
+   528→              <div className="flex justify-center gap-1">
+   529→                {Array.from({ length: t.rating }).map((_, i) => <Star key={i} className="h-4 w-4 fill-gold text-gold" />)}
+   530→              </div>
+   531→              <blockquote className="mx-auto mt-6 max-w-3xl font-[family-name:var(--font-playfair)] text-2xl font-medium italic leading-[1.4] text-foreground sm:text-4xl sm:leading-[1.35]">
+   532→                “{t.message}”
+   533→              </blockquote>
+   534→              <figcaption className="mt-8 flex items-center justify-center gap-3">
+   535→                {t.photo && <img src={t.photo} alt={t.name} loading="lazy" decoding="async" className="h-12 w-12 rounded-full object-cover ring-2 ring-gold/40" />}
+   536→                <div className="text-left">
+   537→                  <p className="font-[family-name:var(--font-playfair)] text-lg text-foreground">{t.name}</p>
+   538→                  <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-gold/80">{t.role}</p>
+   539→                </div>
+   540→              </figcaption>
+   541→            </motion.figure>
+   542→          </AnimatePresence>
+   543→        </div>
+   544→        <div className="mt-10 flex justify-center gap-2">
+   545→          {list.map((_, i) => (
+   546→            <button key={i} onClick={() => setIdx(i)} className={cn("h-1.5 rounded-full transition-all duration-500", i === idx ? "w-10 bg-gold" : "w-1.5 bg-white/20")} aria-label={`Testimonial ${i + 1}`} />
+   547→          ))}
+   548→        </div>
+   549→      </div>
+   550→    </section>
+   551→  );
+   552→}
+   553→
+   554→/* ============== GOOGLE REVIEWS — trust-building social proof ============== */
+   555→function GoogleReviews() {
+   556→  const reviews = [
+   557→    { name: "Alexandra R.", rating: 5, text: "The tasting menu was a journey. Each course more stunning than the last. Black Orchid has set a new standard.", time: "2 weeks ago" },
+   558→    { name: "Jonathan P.", rating: 5, text: "Service was impeccable and the wagyu melted like butter. The ambience transports you.", time: "1 month ago" },
+   559→    { name: "Mira S.", rating: 4, text: "Beautiful evening for our anniversary. The sommelier's pairing was inspired.", time: "1 month ago" },
+   560→  ];
+   561→  return (
+   562→    <section className="border-y border-white/[0.06] bg-[#080808] py-24 sm:py-32">
+   563→      <div className="mx-auto max-w-7xl px-6 sm:px-10">
+   564→        <div className="grid gap-10 lg:grid-cols-[auto_1fr] lg:items-center lg:gap-16">
+   565→          {/* Rating summary */}
+   566→          <div className="text-center lg:text-left">
+   567→            <Eyebrow className="mb-4 lg:justify-start">Google Reviews</Eyebrow>
+   568→            <div className="flex items-center justify-center gap-4 lg:justify-start">
+   569→              <span className="font-[family-name:var(--font-playfair)] text-6xl font-semibold text-gold-gradient sm:text-7xl">4.8</span>
+   570→              <div>
+   571→                <div className="flex gap-1" aria-label="4.8 out of 5 stars">
+   572→                  {Array.from({ length: 5 }).map((_, i) => <Star key={i} className="h-5 w-5 fill-gold text-gold" />)}
+   573→                </div>
+   574→                <p className="mt-1 font-sans text-sm text-foreground/70">Based on 1,284 reviews</p>
+   575→              </div>
+   576→            </div>
+   577→          </div>
+   578→          {/* Review cards */}
+   579→          <div className="grid gap-4 sm:grid-cols-3">
+   580→            {reviews.map((r, i) => (
+   581→              <motion.div
+   582→                key={i}
+   583→                initial={{ opacity: 0, y: 20 }}
+   584→                whileInView={{ opacity: 1, y: 0 }}
+   585→                viewport={{ once: true, margin: "-50px" }}
+   586→                transition={{ duration: 0.6, delay: i * 0.1 }}
+   587→                className="rounded-2xl border border-white/[0.06] bg-card p-6"
+   588→              >
+   589→                <div className="flex items-center justify-between">
+   590→                  <div className="flex gap-0.5" aria-label={`${r.rating} out of 5 stars`}>
+   591→                    {Array.from({ length: r.rating }).map((_, j) => <Star key={j} className="h-3.5 w-3.5 fill-gold text-gold" />)}
+   592→                  </div>
+   593→                  <span className="font-sans text-[10px] text-muted-foreground">{r.time}</span>
+   594→                </div>
+   595→                <p className="mt-3 font-[family-name:var(--font-cormorant)] text-base italic leading-relaxed text-foreground/80">“{r.text}”</p>
+   596→                <p className="mt-3 font-sans text-sm font-medium text-foreground">{r.name}</p>
+   597→              </motion.div>
+   598→            ))}
+   599→          </div>
+   600→        </div>
+   601→      </div>
+   602→    </section>
+   603→  );
+   604→}
+   605→
+   606→/* ============== RESERVATION CTA — immersive floating ============== */
+   607→function ReservationCinema({ settings, onReserve }: { settings: SiteSettings | null; onReserve: () => void }) {
+   608→  const contentRef = useFadeUp<HTMLDivElement>({ duration: 0.8 });
+   609→
+   610→  return (
+   611→    <section className="relative overflow-hidden bg-background py-32 sm:py-44">
+   612→      <div className="ambient-orb" style={{ width: 400, height: 400, background: "rgba(212,175,55,0.12)", top: "10%", left: "20%" }} />
+   613→      <div className="ambient-orb" style={{ width: 500, height: 500, background: "rgba(212,175,55,0.08)", bottom: "0%", right: "10%", animationDelay: "-6s" }} />
+   614→      <div ref={contentRef} className="relative z-10 mx-auto max-w-3xl px-6 text-center">
+   615→        <Eyebrow className="justify-center mb-7">Reserve Your Evening</Eyebrow>
+   616→        <RevealText
+   617→          text="An unforgettable experience awaits"
+   618→          as="h2"
+   619→          className="font-[family-name:var(--font-playfair)] text-5xl font-semibold leading-[1.02] tracking-luxe text-foreground sm:text-7xl"
+   620→        />
+   621→        <motion.p
+   622→          initial={{ opacity: 0, y: 16 }}
+   623→          whileInView={{ opacity: 1, y: 0 }}
+   624→          viewport={{ once: true, margin: "-60px" }}
+   625→          transition={{ duration: 0.8, delay: 0.4 }}
+   626→          className="mx-auto mt-7 max-w-[600px] font-[family-name:var(--font-cormorant)] text-xl italic leading-relaxed text-foreground/80 sm:text-2xl"
+   627→        >
+   628→          Let us craft an evening that lingers in memory. Reserve in moments — confirm in elegance.
+   629→        </motion.p>
+   630→        {/* Dual CTA — Reserve + Call Now for conversion clarity */}
+   631→        <motion.div
+   632→          initial={{ opacity: 0, y: 16 }}
+   633→          whileInView={{ opacity: 1, y: 0 }}
+   634→          viewport={{ once: true, margin: "-60px" }}
+   635→          transition={{ duration: 0.8, delay: 0.55 }}
+   636→          className="mt-12 flex flex-wrap items-center justify-center gap-4"
+   637→        >
+   638→          <LuxuryButton onClick={onReserve} className="glow-border min-h-[52px] rounded-full text-sm">
+   639→            Reserve a Table <ArrowRight className="h-4 w-4" />
+   640→          </LuxuryButton>
+   641→          <a
+   642→            href={`tel:${settings?.phone}`}
+   643→            className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full border border-gold/40 px-8 py-4 font-sans text-[12px] font-semibold uppercase tracking-[0.2em] text-gold transition-all duration-300 hover:bg-gold/8 hover:border-gold/70"
+   644→          >
+   645→            Call Now
+   646→          </a>
+   647→        </motion.div>
+   648→        <motion.p
+   649→          initial={{ opacity: 0 }}
+   650→          whileInView={{ opacity: 1 }}
+   651→          viewport={{ once: true }}
+   652→          transition={{ duration: 0.8, delay: 0.8 }}
+   653→          className="mt-8 font-sans text-xs uppercase tracking-[0.25em] text-foreground/60"
+   654→        >
+   655→          {settings?.phone} · {settings?.address}
+   656→        </motion.p>
+   657→      </div>
+   658→    </section>
+   659→  );
+   660→}
+   661→
