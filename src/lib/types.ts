@@ -7,24 +7,37 @@ export type MenuCategory = {
   items: MenuItem[];
 };
 
+export type DietaryType = "vegetarian" | "non_vegetarian" | "not_specified";
+
+export type DishVariant = {
+  name: string;
+  price: number;
+  dietaryType?: DietaryType;
+};
+
 export type MenuItem = {
   id: string;
   name: string;
   tagline: string | null;
   description: string;
   shortDescription: string | null;
-  price: number;
+  price: number | null;
+  variants: DishVariant[];
   image: string | null;
   images: string[]; // parsed from JSON
   categoryId: string;
   available: boolean;
   veg: boolean;
+  dietaryType: DietaryType;
   spice: number;
   featured: boolean;
   chefRecommended: boolean;
   ingredients: string[]; // parsed from JSON
   allergens: string[]; // parsed from JSON
   servingSize: string | null;
+  winePairing?: string | null;
+  tastingNotes?: string | null;
+  pairingPrice?: number | null;
   order: number;
 };
 
@@ -41,10 +54,12 @@ export type Reservation = {
   id: string;
   name: string;
   phone: string;
+  phoneNormalized?: string | null;
   email: string;
   date: string;
   time: string;
   guests: number;
+  kids?: number;
   special: string | null;
   status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
   createdAt: string;
@@ -81,6 +96,11 @@ export type CateringPackage = {
   order: number;
 };
 
+export type NotificationDispatchResult = {
+  email: "SENT" | "FAILED" | "DISABLED" | "SKIPPED";
+  sms: "SENT" | "FAILED" | "DISABLED" | "SKIPPED";
+};
+
 export type SiteSettings = {
   id: string;
   restaurantName: string;
@@ -90,7 +110,11 @@ export type SiteSettings = {
   aboutTitle: string;
   aboutBody: string;
   phone: string;
+  phoneSecondary?: string | null;
   email: string;
+  managerEmail: string;
+  smsSenderName: string;
+  notificationsEnabled: boolean;
   address: string;
   mapEmbed: string | null;
   hoursWeekday: string;

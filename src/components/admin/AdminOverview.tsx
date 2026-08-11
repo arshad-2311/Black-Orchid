@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from "react";
 import {
-  CalendarCheck, Clock, Users, DollarSign, AlertTriangle,
-  UtensilsCrossed, Images, Settings, ChevronRight, Download,
+  CalendarCheck, Clock, UtensilsCrossed, Images, Settings, ChevronRight, Download,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
 import { apiGet } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { Stats, MenuCategory } from "@/lib/types";
+import type { Stats } from "@/lib/types";
 import {
   StatCard, AdminCard, StatusBadge, AdminSectionTitle,
   AdminButton, Badge, Skeleton, EmptyState,
@@ -50,18 +49,12 @@ const QUICK_ACTIONS: {
    ========================================================= */
 export function AdminOverview({ onNavigate }: { onNavigate?: (section: string) => void }) {
   const [stats, setStats] = useState<Stats | null>(null);
-  const [menu, setMenu] = useState<MenuCategory[] | null>(null);
 
   useEffect(() => {
     let alive = true;
     apiGet<Stats>("/api/stats")
       .then((s) => {
         if (alive) setStats(s);
-      })
-      .catch(() => {});
-    apiGet<MenuCategory[]>("/api/menu")
-      .then((m) => {
-        if (alive) setMenu(m);
       })
       .catch(() => {});
     return () => {
@@ -74,8 +67,8 @@ export function AdminOverview({ onNavigate }: { onNavigate?: (section: string) =
     return (
       <div className="space-y-6">
         <Skeleton className="h-16 w-72" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, i) => (
             <Skeleton key={i} className="h-32" />
           ))}
         </div>
@@ -97,10 +90,6 @@ export function AdminOverview({ onNavigate }: { onNavigate?: (section: string) =
     reservations: w.count,
   }));
   const recent = stats.recentReservations.slice(0, 6);
-  const pendingIcon = stats.pendingReservations > 0 ? AlertTriangle : Users;
-  const featuredDishes = menu
-    ? menu.flatMap((c) => c.items).filter((i) => i.featured).slice(0, 6)
-    : [];
 
   return (
     <div className="space-y-6">
@@ -114,14 +103,12 @@ export function AdminOverview({ onNavigate }: { onNavigate?: (section: string) =
         }
       />
 
-      {/* ============ KPI Row ============ */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ============ KPI Row (Cleaned: Total & Today's Reservations only) ============ */}
+      <div className="grid gap-4 sm:grid-cols-2">
         <StatCard
           label="Total Reservations"
           value={stats.totalReservations}
           icon={CalendarCheck}
-          delta="+12% wow"
-          deltaPositive
           spark={weeklySpark}
         />
         <StatCard
@@ -129,20 +116,6 @@ export function AdminOverview({ onNavigate }: { onNavigate?: (section: string) =
           value={stats.todayReservations}
           icon={Clock}
           spark={weeklySpark.slice(-7)}
-        />
-        <StatCard
-          label="Pending Approval"
-          value={stats.pendingReservations}
-          icon={pendingIcon}
-          delta={stats.pendingReservations > 0 ? "needs review" : undefined}
-          deltaPositive={stats.pendingReservations === 0}
-        />
-        <StatCard
-          label="Revenue (mo)"
-          value="$48,250"
-          icon={DollarSign}
-          delta="+8%"
-          deltaPositive
         />
       </div>
 
@@ -227,7 +200,7 @@ export function AdminOverview({ onNavigate }: { onNavigate?: (section: string) =
         </AdminCard>
       </div>
 
-      {/* ============ Recent Reservations + Activity ============ */}
+      {/* ============ Recent Reservations + Recent Activity ============ */}
       <div className="grid gap-6 lg:grid-cols-3">
         <AdminCard className="overflow-hidden p-0 lg:col-span-2">
           <div className="flex items-center justify-between border-b border-admin-border px-6 py-4">
@@ -246,7 +219,7 @@ export function AdminOverview({ onNavigate }: { onNavigate?: (section: string) =
           </div>
           {recent.length === 0 ? (
             <EmptyState
-              title="No reservations yet"
+              title="No recent reservations"
               message="New booking requests will appear here."
             />
           ) : (
@@ -256,7 +229,8 @@ export function AdminOverview({ onNavigate }: { onNavigate?: (section: string) =
                   <tr className="border-b border-admin-border">
                     <th className="px-6 py-3 text-left admin-label">Guest</th>
                     <th className="px-6 py-3 text-left admin-label">Date / Time</th>
-                    <th className="px-6 py-3 text-left admin-label">Pax</th>
+                    <th className="px-6 py-3 text-left admin-label">Adults</th>
+                    <th className="px-6 py-3 text-left admin-label">Kids</th>
                     <th className="px-6 py-3 text-left admin-label">Status</th>
                   </tr>
                 </thead>
@@ -278,6 +252,7 @@ export function AdminOverview({ onNavigate }: { onNavigate?: (section: string) =
                         <p className="text-xs text-admin-muted">{r.time}</p>
                       </td>
                       <td className="px-6 py-3 font-sans text-sm text-admin-text">{r.guests}</td>
+                      <td className="px-6 py-3 font-sans text-sm text-admin-text">{r.kids || 0}</td>
                       <td className="px-6 py-3">
                         <StatusBadge status={r.status} />
                       </td>
@@ -318,64 +293,6 @@ export function AdminOverview({ onNavigate }: { onNavigate?: (section: string) =
           )}
         </AdminCard>
       </div>
-
-      {/* ============ Popular Dishes ============ */}
-      <AdminCard className="p-6">
-        <div className="mb-5 flex items-center justify-between">
-          <div>
-            <h3 className="font-[family-name:var(--font-playfair)] text-xl font-semibold text-admin-text">
-              Popular Dishes
-            </h3>
-            <p className="mt-0.5 font-sans text-xs text-admin-muted">Featured items on the menu</p>
-          </div>
-          <button
-            onClick={() => onNavigate?.("menu")}
-            className="font-sans text-xs text-admin-gold transition-colors hover:text-admin-gold/80"
-          >
-            View all
-          </button>
-        </div>
-        {!menu ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-24" />
-            ))}
-          </div>
-        ) : featuredDishes.length === 0 ? (
-          <EmptyState
-            title="No featured dishes"
-            message="Mark menu items as featured to highlight them here."
-          />
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {featuredDishes.map((d) => (
-              <div
-                key={d.id}
-                className="group flex gap-3 rounded-xl border border-admin-border bg-white/[0.02] p-3 transition-all hover:border-admin-gold/30 hover:bg-admin-gold/[0.03]"
-              >
-                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-admin-border bg-admin-bg">
-                  {d.image ? (
-                    <img src={d.image} alt={d.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <UtensilsCrossed className="h-5 w-5 text-admin-muted" />
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="truncate font-sans text-sm font-medium text-admin-text">{d.name}</p>
-                    <Badge tone="gold">Featured</Badge>
-                  </div>
-                  <p className="mt-1 font-[family-name:var(--font-playfair)] text-base font-semibold text-admin-gold">
-                    ${d.price.toFixed(2)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </AdminCard>
     </div>
   );
 }

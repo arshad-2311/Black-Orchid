@@ -34,6 +34,18 @@ export function PillNav({ settings }: { settings: { restaurantName: string; tagl
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Lock background body scroll while mobile drawer is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
+
   const go = (v: ViewKey) => {
     setView(v);
     setMobileOpen(false);
@@ -71,14 +83,14 @@ export function PillNav({ settings }: { settings: { restaurantName: string; tagl
                 key={item.view}
                 onClick={() => go(item.view)}
                 className={cn(
-                  "relative px-4 py-2 font-sans text-[12px] uppercase tracking-[0.18em] transition-colors duration-300",
-                  view === item.view ? "text-black" : "text-foreground/70 hover:text-foreground"
+                  "relative px-3.5 py-1.5 font-sans text-[11px] uppercase tracking-[0.2em] transition-colors duration-300",
+                  view === item.view ? "text-gold font-semibold" : "text-foreground/70 hover:text-foreground"
                 )}
               >
                 {view === item.view && (
                   <motion.span
                     layoutId="pillnav-active"
-                    className="absolute inset-0 rounded-full bg-gold-gradient"
+                    className="absolute inset-0 rounded-full border border-gold/40 bg-gold/10 shadow-[0_0_12px_rgba(212,175,55,0.2)]"
                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   />
                 )}

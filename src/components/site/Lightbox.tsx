@@ -2,9 +2,15 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export type LightboxImage = { url: string; title?: string; caption?: string | null };
+
+const slideVariants = {
+  enter: (dir: number) => ({ opacity: 0, x: dir > 0 ? 60 : -60, scale: 0.97 }),
+  center: { opacity: 1, x: 0, scale: 1 },
+  exit: (dir: number) => ({ opacity: 0, x: dir > 0 ? -60 : 60, scale: 0.97 }),
+};
 
 export function Lightbox({
   images,
@@ -17,11 +23,18 @@ export function Lightbox({
   onClose: () => void;
   onNav: (dir: -1 | 1) => void;
 }) {
+  const [direction, setDirection] = useState(1);
+
+  const handleNav = (dir: -1 | 1) => {
+    setDirection(dir);
+    onNav(dir);
+  };
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
-      if (e.key === "ArrowLeft") onNav(-1);
-      if (e.key === "ArrowRight") onNav(1);
+      if (e.key === "ArrowLeft") handleNav(-1);
+      if (e.key === "ArrowRight") handleNav(1);
     };
     window.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
@@ -35,11 +48,14 @@ export function Lightbox({
   if (!img) return null;
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait" custom={direction}>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        role="dialog"
+        aria-modal="true"
+        aria-label={img.title || "Gallery photo viewer"}
         className="fixed inset-0 z-[90] flex items-center justify-center bg-background/95 backdrop-blur-xl"
         onClick={onClose}
       >
@@ -51,14 +67,14 @@ export function Lightbox({
           <X className="h-5 w-5" />
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); onNav(-1); }}
+          onClick={(e) => { e.stopPropagation(); handleNav(-1); }}
           className="absolute left-4 flex h-12 w-12 items-center justify-center rounded-full border border-gold/30 text-gold transition-colors hover:bg-gold/10 sm:left-8"
           aria-label="Previous"
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); onNav(1); }}
+          onClick={(e) => { e.stopPropagation(); handleNav(1); }}
           className="absolute right-4 flex h-12 w-12 items-center justify-center rounded-full border border-gold/30 text-gold transition-colors hover:bg-gold/10 sm:right-8"
           aria-label="Next"
         >
@@ -67,9 +83,12 @@ export function Lightbox({
 
         <motion.figure
           key={index}
-          initial={{ opacity: 0, scale: 0.94 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          custom={direction}
+          variants={slideVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           className="relative max-h-[85vh] max-w-5xl px-4"
           onClick={(e) => e.stopPropagation()}
         >

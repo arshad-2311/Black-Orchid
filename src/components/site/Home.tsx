@@ -58,12 +58,60 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
   const opacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
   const scale = useTransform(scrollYProgress, [0, 1], [1, 1.15]);
   const poster = IMAGES.hero[0];
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [ambientColor, setAmbientColor] = useState<string>("rgba(212, 175, 55, 0.22)");
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return;
+
+    let animId: number;
+    let lastTime = 0;
+
+    const sampleFrame = (time: number) => {
+      // Throttle sampling to ~15 FPS (every ~66ms) for ultra-low overhead (< 0.5% CPU)
+      if (time - lastTime > 66 && video.readyState >= 2) {
+        lastTime = time;
+        try {
+          ctx.drawImage(video, 0, 0, 16, 16);
+          const data = ctx.getImageData(0, 0, 16, 16).data;
+          let r = 0, g = 0, b = 0;
+          for (let i = 0; i < data.length; i += 4) {
+            r += data[i];
+            g += data[i + 1];
+            b += data[i + 2];
+          }
+          const count = data.length / 4;
+          r = Math.round(r / count);
+          g = Math.round(g / count);
+          b = Math.round(b / count);
+          // Boost warmth & gold luminance slightly for luxury ambience
+          setAmbientColor(`rgba(${Math.min(255, r + 25)}, ${Math.min(255, g + 20)}, ${b}, 0.28)`);
+        } catch {
+          /* noop */
+        }
+      }
+      animId = requestAnimationFrame(sampleFrame);
+    };
+
+    animId = requestAnimationFrame(sampleFrame);
+    return () => cancelAnimationFrame(animId);
+  }, []);
 
   return (
-    <section ref={ref} className="relative flex h-[100svh] min-h-[100svh] w-screen items-center justify-center overflow-hidden cinematic-grain">
+    <section ref={ref} className="relative flex h-[100svh] min-h-[100svh] w-full items-center justify-center overflow-hidden cinematic-grain">
+      {/* Hidden 16x16 canvas for video color sampling */}
+      <canvas ref={canvasRef} width={16} height={16} className="hidden" aria-hidden />
+
       {/* Video background */}
       <motion.div style={{ scale }} className="absolute inset-0">
         <video
+          ref={videoRef}
           className="h-full w-full object-cover object-center"
           autoPlay muted loop playsInline preload="auto" poster={poster}
           disablePictureInPicture controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
@@ -73,6 +121,12 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
           <source src="/hero-video.mp4" type="video/mp4" />
         </video>
       </motion.div>
+
+      {/* Real-time Video Ambilight Spill Overlay */}
+      <div
+        className="pointer-events-none absolute inset-0 transition-colors duration-700 ease-out"
+        style={{ background: `radial-gradient(circle at 50% 45%, ${ambientColor} 0%, transparent 65%)` }}
+      />
 
       {/* Ambient floating gold orbs */}
       <div className="ambient-orb" style={{ width: 400, height: 400, background: "rgba(212,175,55,0.18)", top: "15%", left: "5%" }} />
@@ -84,33 +138,35 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
       <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 30%, rgba(10,10,10,0.8) 100%)" }} />
 
       {/* Content */}
-      <motion.div style={{ y, opacity }} className="relative z-10 mx-auto max-w-5xl px-6 text-center">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6, duration: 1 }}>
-          <Eyebrow className="justify-center">{settings?.tagline || "Fine Dining & Banquet"}</Eyebrow>
+      <motion.div style={{ y, opacity }} className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 text-center">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.5 }}>
+          <Eyebrow className="justify-center">
+            {settings?.tagline || "Fine Dining & Banquet"} — ANNA NAGAR, CHENNAI
+          </Eyebrow>
         </motion.div>
 
         <RevealText
           text={settings?.heroTitle || "An Exquisite Symphony of Flavour"}
           as="h1"
-          stagger={0.08}
-          delay={1.8}
-          className="mt-8 font-[family-name:var(--font-playfair)] text-5xl font-semibold leading-[1.02] tracking-luxe text-foreground drop-shadow-[0_4px_30px_rgba(10,10,10,0.6)] sm:text-7xl lg:text-[5.5rem]"
+          stagger={0.04}
+          delay={0.3}
+          className="mt-5 font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.05] tracking-luxe text-foreground drop-shadow-[0_4px_30px_rgba(10,10,10,0.6)] sm:text-6xl lg:text-[5.5rem]"
         />
 
         <motion.p
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 2.6, duration: 1 }}
-          className="mx-auto mt-8 max-w-xl font-[family-name:var(--font-cormorant)] text-xl italic text-foreground/85 drop-shadow-[0_2px_16px_rgba(10,10,10,0.6)] sm:text-2xl"
+          transition={{ delay: 0.5, duration: 0.6 }}
+          className="mx-auto mt-6 max-w-xl font-[family-name:var(--font-cormorant)] text-xl italic text-foreground/85 drop-shadow-[0_2px_16px_rgba(10,10,10,0.6)] sm:text-2xl"
         >
           {settings?.heroSubtitle}
         </motion.p>
 
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 3, duration: 0.9 }}
-          className="mt-12 flex flex-wrap items-center justify-center gap-4"
+          transition={{ delay: 0.7, duration: 0.6 }}
+          className="mt-10 flex flex-wrap items-center justify-center gap-4"
         >
           <LuxuryButton onClick={() => setView("reservation")} className="min-h-[52px] text-sm" cursorLabel="Reserve">
             Reserve a Table <ArrowRight className="h-4 w-4" />
@@ -122,10 +178,10 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
 
         {/* Trust indicators — answer "why choose us" instantly */}
         <motion.ul
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 3.4, duration: 0.9 }}
-          className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-foreground/70"
+          transition={{ delay: 0.9, duration: 0.6 }}
+          className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-foreground/75"
           aria-label="Trust indicators"
         >
           <li className="flex items-center gap-1.5 text-sm">
@@ -137,11 +193,7 @@ function Hero({ settings }: { settings: SiteSettings | null }) {
           <li className="hidden h-3 w-px bg-white/15 sm:block" aria-hidden />
           <li className="flex items-center gap-1.5 font-sans text-xs tracking-wide"><Award className="h-3.5 w-3.5 text-gold" aria-hidden /> Premium Fine Dining</li>
           <li className="hidden h-3 w-px bg-white/15 sm:block" aria-hidden />
-          <li className="flex items-center gap-1.5 font-sans text-xs tracking-wide"><Users className="h-3.5 w-3.5 text-gold" aria-hidden /> Banquet Available</li>
-          <li className="hidden h-3 w-px bg-white/15 sm:block" aria-hidden />
-          <li className="flex items-center gap-1.5 font-sans text-xs tracking-wide"><Music className="h-3.5 w-3.5 text-gold" aria-hidden /> Live Music</li>
-          <li className="hidden h-3 w-px bg-white/15 sm:block" aria-hidden />
-          <li className="flex items-center gap-1.5 font-sans text-xs tracking-wide"><UtensilsCrossed className="h-3.5 w-3.5 text-gold" aria-hidden /> Family Friendly</li>
+          <li className="flex items-center gap-1.5 font-sans text-xs tracking-wide"><Users className="h-3.5 w-3.5 text-gold" aria-hidden /> Banquet Facility</li>
         </motion.ul>
       </motion.div>
     </section>

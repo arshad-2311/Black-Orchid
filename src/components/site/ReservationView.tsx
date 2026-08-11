@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, ArrowRight, Calendar, Check, Clock, Mail, Minus, Phone, Plus, Sparkles, User,
+  ArrowLeft, ArrowRight, Calendar, Check, Clock, Mail, Minus, Phone, Plus, Sparkles, User, QrCode, Printer,
 } from "lucide-react";
+import QRCode from "qrcode";
 import { Eyebrow, LuxuryButton, OrnamentDivider } from "./primitives";
 import { RevealText } from "./motion";
 import { apiPost } from "@/lib/api";
@@ -12,10 +13,12 @@ import { IMAGES } from "@/lib/images";
 import { toast } from "sonner";
 import type { Reservation } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { PremiumCalendar } from "./PremiumCalendar";
 
 const STEPS = ["Date", "Time", "Guests", "Details", "Confirm"] as const;
 const LUNCH_TIMES = ["11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM"];
-const DINNER_TIMES = ["6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM", "9:00 PM", "9:30 PM"];
+const AFTERNOON_TIMES = ["3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM"];
+const DINNER_TIMES = ["6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM", "9:00 PM", "9:30 PM", "10:00 PM", "10:30 PM", "11:00 PM"];
 const GUEST_OPTIONS = ["1", "2", "3", "4", "5", "6", "7", "8+"] as const;
 const MAX_GUESTS = 20;
 
@@ -26,11 +29,12 @@ type FormState = {
   date: string;
   time: string;
   guests: string;
+  kids: string;
   special: string;
 };
 
 const EMPTY_FORM: FormState = {
-  name: "", phone: "", email: "", date: "", time: "", guests: "2", special: "",
+  name: "", phone: "", email: "", date: "", time: "", guests: "2", kids: "0", special: "",
 };
 
 const stepVariants = {
@@ -40,7 +44,9 @@ const stepVariants = {
 };
 
 const inputClass =
-  "h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm text-foreground placeholder:text-muted-foreground/50 transition-all duration-200 focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/15 sm:h-14 sm:text-base";
+  "h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-foreground placeholder:text-muted-foreground/50 transition-all duration-200 focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/15 sm:h-14";
+
+type ReservationWithNotif = Reservation & { notificationStatus?: { email: string; sms: string } };
 
 export function ReservationView() {
   const [step, setStep] = useState(0);
@@ -48,7 +54,7 @@ export function ReservationView() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState<Reservation | null>(null);
+  const [success, setSuccess] = useState<ReservationWithNotif | null>(null);
   const wizardRef = useRef<HTMLDivElement>(null);
 
   const today = new Date().toISOString().slice(0, 10);
@@ -116,6 +122,7 @@ export function ReservationView() {
         date: form.date,
         time: form.time,
         guests: Number(form.guests),
+        kids: Number(form.kids || 0),
         special: form.special.trim(),
       });
       setSuccess(res);
@@ -297,7 +304,7 @@ function StepIndicator({ step }: { step: number }) {
           className="absolute left-0 top-[18px] h-px bg-gold-gradient sm:top-[20px]"
           initial={false}
           animate={{ width: `${(step / (total - 1)) * 100}%` }}
-          transition={{ duration: 0.5, ease: "easeInOut" }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         />
         {STEPS.map((label, i) => (
           <div key={label} className="relative z-10 flex flex-col items-center">
@@ -357,16 +364,22 @@ function StepDate({
         <h2 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground sm:text-4xl">Choose a Date</h2>
         <p className="mt-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">Select the evening you wish to join us.</p>
       </div>
-      <PremiumField id="r-date" label="Date" icon={Calendar} error={errors.date}>
-        <input
-          id="r-date"
-          type="date"
-          min={today}
+      <div className="pt-2">
+        <label className="mb-2 block font-mono text-xs tracking-widest text-muted-foreground uppercase">
+          Reservation Date
+        </label>
+        <PremiumCalendar
           value={form.date}
-          onChange={(e) => update("date", e.target.value)}
-          className={cn(inputClass, "r-date-input")}
+          onChange={(val) => update("date", val)}
+          minDate={today}
+          error={errors.date}
         />
-      </PremiumField>
+        {errors.date && (
+          <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="mt-2 font-sans text-xs text-red-400">
+            {errors.date}
+          </motion.p>
+        )}
+      </div>
     </div>
   );
 }
@@ -385,11 +398,12 @@ function StepTime({
     <div className="space-y-6">
       <div>
         <h2 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground sm:text-4xl">Select a Time</h2>
-        <p className="mt-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">Lunch or dinner — your table awaits.</p>
+        <p className="mt-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">Open continuously from 11:00 AM to 11:00 PM.</p>
       </div>
       <div className="space-y-5">
-        <TimeGroup title="Lunch Service" times={LUNCH_TIMES} selected={form.time} onSelect={(t) => update("time", t)} />
-        <TimeGroup title="Dinner Service" times={DINNER_TIMES} selected={form.time} onSelect={(t) => update("time", t)} />
+        <TimeGroup title="Lunch Service (11:00 AM – 2:30 PM)" times={LUNCH_TIMES} selected={form.time} onSelect={(t) => update("time", t)} />
+        <TimeGroup title="Afternoon & Lounge (3:00 PM – 5:30 PM)" times={AFTERNOON_TIMES} selected={form.time} onSelect={(t) => update("time", t)} />
+        <TimeGroup title="Dinner Service (6:00 PM – 11:00 PM)" times={DINNER_TIMES} selected={form.time} onSelect={(t) => update("time", t)} />
       </div>
       {errors.time && (
         <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="font-sans text-xs text-red-400">
@@ -413,9 +427,47 @@ function StepGuests({
     <div className="space-y-6">
       <div>
         <h2 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground sm:text-4xl">Party Size</h2>
-        <p className="mt-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">How many will be joining the table?</p>
+        <p className="mt-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">Select the number of guests and kids joining your table.</p>
       </div>
-      <GuestStepper value={form.guests} onChange={(v) => update("guests", v)} />
+
+      <div className="space-y-6">
+        {/* ADULTS SECTION */}
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6">
+          <div className="mb-4 text-center">
+            <span className="font-mono text-xs uppercase tracking-[0.25em] text-gold/90 font-semibold">
+              Adult Guests
+            </span>
+          </div>
+          <GuestStepper
+            value={form.guests}
+            min={1}
+            max={MAX_GUESTS}
+            label="Guest"
+            labelPlural="Guests"
+            showQuickSelect={true}
+            onChange={(v) => update("guests", v)}
+          />
+        </div>
+
+        {/* KIDS SECTION */}
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6">
+          <div className="mb-4 text-center">
+            <span className="font-mono text-xs uppercase tracking-[0.25em] text-gold/90 font-semibold">
+              Kids / Children
+            </span>
+            <p className="mt-0.5 text-xs text-muted-foreground/60">Ages 12 & under</p>
+          </div>
+          <GuestStepper
+            value={form.kids || "0"}
+            min={0}
+            max={10}
+            label="Kid"
+            labelPlural="Kids"
+            showQuickSelect={false}
+            onChange={(v) => update("kids", v)}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -441,7 +493,7 @@ function StepDetails({
       </PremiumField>
       <div className="grid gap-5 sm:grid-cols-2">
         <PremiumField id="r-phone" label="Phone" icon={Phone} error={errors.phone}>
-          <input id="r-phone" value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+1 (555) 000-0000" className={inputClass} autoComplete="tel" />
+          <input id="r-phone" value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+91 95850 18502" className={inputClass} autoComplete="tel" />
         </PremiumField>
         <PremiumField id="r-email" label="Email" icon={Mail} error={errors.email}>
           <input id="r-email" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="jane@email.com" className={inputClass} autoComplete="email" />
@@ -525,17 +577,33 @@ function TimeSlot({ value, selected, onClick }: { value: string; selected: boole
   );
 }
 
-function GuestStepper({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const n = Math.max(1, Math.min(MAX_GUESTS, Number(value) || 1));
-  const set = (v: number) => onChange(String(Math.max(1, Math.min(MAX_GUESTS, v))));
+function GuestStepper({
+  value,
+  min = 1,
+  max = MAX_GUESTS,
+  label = "Guest",
+  labelPlural = "Guests",
+  showQuickSelect = true,
+  onChange,
+}: {
+  value: string;
+  min?: number;
+  max?: number;
+  label?: string;
+  labelPlural?: string;
+  showQuickSelect?: boolean;
+  onChange: (v: string) => void;
+}) {
+  const n = Math.max(min, Math.min(max, Number(value) || 0));
+  const set = (v: number) => onChange(String(Math.max(min, Math.min(max, v))));
   return (
     <div className="flex flex-col items-center">
       <div className="flex items-center gap-6 sm:gap-10">
         <button
           type="button"
           onClick={() => set(n - 1)}
-          disabled={n <= 1}
-          aria-label="Decrease party size"
+          disabled={n <= min}
+          aria-label={`Decrease ${label}`}
           className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 text-foreground transition-all duration-200 hover:border-gold/50 hover:text-gold disabled:pointer-events-none disabled:opacity-30 sm:h-14 sm:w-14"
         >
           <Minus className="h-4 w-4" />
@@ -545,14 +613,14 @@ function GuestStepper({ value, onChange }: { value: string; onChange: (v: string
             {n}
           </span>
           <span className="mt-1 font-sans text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-            {n === 1 ? "Guest" : "Guests"}
+            {n === 1 ? label : labelPlural}
           </span>
         </div>
         <button
           type="button"
           onClick={() => set(n + 1)}
-          disabled={n >= MAX_GUESTS}
-          aria-label="Increase party size"
+          disabled={n >= max}
+          aria-label={`Increase ${label}`}
           className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 text-foreground transition-all duration-200 hover:border-gold/50 hover:text-gold disabled:pointer-events-none disabled:opacity-30 sm:h-14 sm:w-14"
         >
           <Plus className="h-4 w-4" />
@@ -560,38 +628,43 @@ function GuestStepper({ value, onChange }: { value: string; onChange: (v: string
       </div>
 
       {/* Quick-select pills */}
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-1.5">
-        {GUEST_OPTIONS.map((g) => {
-          const sel = g === "8+" ? n >= 8 : String(n) === g;
-          return (
-            <button
-              key={g}
-              type="button"
-              onClick={() => onChange(g === "8+" ? "8" : g)}
-              className={cn(
-                "flex h-9 min-w-[38px] items-center justify-center rounded-full border px-3 font-sans text-xs font-medium transition-all duration-200",
-                sel
-                  ? "border-transparent bg-gold-gradient text-black"
-                  : "border-white/10 text-muted-foreground hover:border-gold/40 hover:text-gold"
-              )}
-            >
-              {g}
-            </button>
-          );
-        })}
-      </div>
+      {showQuickSelect && (
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-1.5">
+          {GUEST_OPTIONS.map((g) => {
+            const sel = g === "8+" ? n >= 8 : String(n) === g;
+            return (
+              <button
+                key={g}
+                type="button"
+                onClick={() => onChange(g === "8+" ? "8" : g)}
+                className={cn(
+                  "flex h-9 min-w-[38px] items-center justify-center rounded-full border px-3 font-sans text-xs font-medium transition-all duration-200",
+                  sel
+                    ? "border-transparent bg-gold-gradient text-black"
+                    : "border-white/10 text-muted-foreground hover:border-gold/40 hover:text-gold"
+                )}
+              >
+                {g}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
 function SummaryCard({ form }: { form: FormState }) {
+  const kidsCount = Number(form.kids || 0);
+  const partyValue = `${form.guests} ${Number(form.guests) === 1 ? "Adult" : "Adults"}${kidsCount > 0 ? `, ${kidsCount} ${kidsCount === 1 ? "Kid" : "Kids"}` : ""}`;
+
   const rows = [
     { label: "Name", value: form.name || "—" },
     { label: "Phone", value: form.phone || "—" },
     { label: "Email", value: form.email || "—" },
     { label: "Date", value: form.date ? formatDate(form.date) : "—" },
     { label: "Time", value: form.time || "—" },
-    { label: "Party", value: `${form.guests} ${Number(form.guests) === 1 ? "Guest" : "Guests"}` },
+    { label: "Party", value: partyValue },
   ];
   return (
     <div className="glass-gold-cinema rounded-3xl p-6 sm:p-8">
@@ -621,20 +694,35 @@ function SummaryCard({ form }: { form: FormState }) {
 function SuccessScreen({
   reservation, onReset,
 }: {
-  reservation: Reservation;
+  reservation: ReservationWithNotif;
   onReset: () => void;
 }) {
   const firstName = reservation.name.split(" ")[0] || reservation.name;
+  const ticketRef = `BO-RES-${reservation.id.slice(-8).toUpperCase()}`;
+  const [qrSvg, setQrSvg] = useState<string>("");
+
+  useEffect(() => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const verifyUrl = `${origin}/verify/${reservation.id}`;
+    QRCode.toString(verifyUrl, { type: "svg", margin: 1, color: { dark: "#D4AF37", light: "#0A0A0C" } })
+      .then(setQrSvg)
+      .catch(() => { });
+  }, [reservation.id]);
+
+  const handlePrint = () => {
+    if (typeof window !== "undefined") window.print();
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className="glass-gold-cinema rounded-3xl p-8 text-center sm:p-12"
+      className="glass-gold-cinema rounded-3xl p-6 text-center sm:p-10 max-w-lg mx-auto"
     >
       {/* Animated gold check — SVG pathLength draw-in */}
-      <div className="mx-auto flex h-24 w-24 items-center justify-center">
-        <motion.svg viewBox="0 0 80 80" className="h-24 w-24" initial="hidden" animate="visible">
+      <div className="mx-auto flex h-20 w-20 items-center justify-center">
+        <motion.svg viewBox="0 0 80 80" className="h-20 w-20" initial="hidden" animate="visible">
           <motion.circle
             cx="40"
             cy="40"
@@ -669,55 +757,80 @@ function SuccessScreen({
         </motion.svg>
       </div>
 
-      <motion.h2
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.6 }}
-        className="mt-6 font-[family-name:var(--font-playfair)] text-4xl font-semibold tracking-luxe text-foreground sm:text-5xl"
-      >
-        Reservation Requested
+      <motion.h2 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6 }} className="mt-6 font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground sm:text-4xl">
+        Table Confirmed
       </motion.h2>
 
-      <motion.p
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7, duration: 0.6 }}
-        className="mx-auto mt-4 max-w-md font-[family-name:var(--font-cormorant)] text-xl italic text-muted-foreground sm:text-2xl"
-      >
-        Thank you, {firstName}. We&apos;ve received your request for{" "}
-        <span className="text-gold">
-          {Number(reservation.guests)} {Number(reservation.guests) === 1 ? "guest" : "guests"}
-        </span>{" "}
-        on <span className="text-gold">{formatDate(reservation.date)}</span> at{" "}
-        <span className="text-gold">{reservation.time}</span>.
+      <motion.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.6 }} className="mx-auto mt-2 max-w-md font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground sm:text-xl">
+        Thank you, {firstName}. We look forward to hosting you at Black Orchid.
       </motion.p>
 
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.9, duration: 0.6 }}
-        className="mx-auto mt-8 max-w-sm rounded-2xl border border-gold/20 bg-background/40 p-5 text-left backdrop-blur-sm"
-      >
-        <Row label="Reference" value={reservation.id.slice(-8).toUpperCase()} />
-        <Row label="Status" value="Pending Confirmation" />
-        <Row label="Email" value={reservation.email} />
+      {/* LUXURY DIGITAL RESERVATION PASS */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.6 }} className="group relative mt-8 overflow-hidden rounded-2xl border border-gold/40 bg-gradient-to-b from-[#14120E] via-[#0A0A0C] to-[#0A0A0C] p-6 text-left shadow-2xl shadow-gold/10 backdrop-blur-md print:bg-black print:text-black">
+        {/* Pass Header */}
+        <div className="flex items-center justify-between border-b border-gold/20 pb-4">
+          <div>
+            <span className="font-sans text-[9px] uppercase tracking-[0.3em] text-gold/80">Digital Guest Pass</span>
+            <h3 className="font-[family-name:var(--font-playfair)] text-xl font-semibold text-foreground">Black Orchid</h3>
+          </div>
+          <span className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 font-mono text-xs font-semibold text-gold">
+            {ticketRef}
+          </span>
+        </div>
+
+        {/* QR Code Center Section */}
+        <div className="my-6 flex flex-col items-center justify-center rounded-xl border border-white/10 bg-black/60 p-4 backdrop-blur-sm">
+          {qrSvg ? (
+            <div className="h-36 w-36 overflow-hidden rounded-lg border border-gold/30 p-2 bg-[#0A0A0C]" dangerouslySetInnerHTML={{ __html: qrSvg }} />
+          ) : (
+            <div className="flex h-36 w-36 items-center justify-center text-gold"><QrCode className="h-16 w-16 animate-pulse" /></div>
+          )}
+          <span className="mt-3 font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+            Scan at Host Stand upon arrival
+          </span>
+        </div>
+
+        {/* Pass Details */}
+        <div className="space-y-2 border-t border-gold/20 pt-4 text-sm">
+          <Row label="Guest" value={reservation.name} />
+          <Row label="Date" value={formatDate(reservation.date)} />
+          <Row label="Time" value={reservation.time} />
+          <Row
+            label="Party Size"
+            value={`${reservation.guests} ${reservation.guests === 1 ? "Adult" : "Adults"}${reservation.kids && reservation.kids > 0 ? `, ${reservation.kids} ${reservation.kids === 1 ? "Kid" : "Kids"}` : ""}`}
+          />
+          <Row label="Email" value={reservation.email} />
+        </div>
+
+        {/* Truthful SMS Notification Badge */}
+        <div className="mt-4 print:hidden">
+          {reservation.notificationStatus?.sms === "SENT" ? (
+            <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 font-sans text-xs text-emerald-400">
+              <Phone className="h-4 w-4 shrink-0 text-emerald-400" />
+              <span>Confirmation details have been sent to your phone.</span>
+            </div>
+          ) : reservation.notificationStatus?.sms === "DISABLED" ? (
+            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 font-sans text-xs text-muted-foreground">
+              <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span>Your reservation has been received. SMS confirmation is currently unavailable.</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 font-sans text-xs text-amber-300">
+              <Phone className="h-4 w-4 shrink-0 text-amber-300" />
+              <span>Your reservation has been received. We were unable to send the SMS confirmation.</span>
+            </div>
+          )}
+        </div>
+
+        {/* Pass Action Controls */}
+        <div className="mt-6 flex justify-center print:hidden">
+          <button onClick={handlePrint} className="w-full flex items-center justify-center gap-2 rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 font-sans text-xs font-semibold uppercase tracking-wider text-gold transition-colors hover:bg-gold/20">
+            <Printer className="h-4 w-4" /> Print / Save Pass
+          </button>
+        </div>
       </motion.div>
 
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.1, duration: 0.6 }}
-        className="mt-6 flex items-center justify-center gap-2 font-sans text-[11px] uppercase tracking-[0.2em] text-gold"
-      >
-        <Sparkles className="h-3.5 w-3.5" /> A confirmation email is on its way
-      </motion.p>
-
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.3, duration: 0.6 }}
-        className="mt-8 flex justify-center"
-      >
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.6 }} className="mt-8 flex justify-center print:hidden">
         <LuxuryButton variant="outline" onClick={onReset} className="min-h-[52px]">
           Make Another Reservation
         </LuxuryButton>
@@ -771,11 +884,14 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatDate(iso: string): string {
-  if (!iso) return "—";
-  const d = new Date(iso + "T00:00:00");
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-US", {
-    weekday: "long", month: "long", day: "numeric", year: "numeric",
-  });
+function formatDate(d: string): string {
+  if (!d) return "—";
+  try {
+    const [y, m, day] = d.split("-").map(Number);
+    const date = new Date(y, m - 1, day);
+    if (isNaN(date.getTime())) return d;
+    return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  } catch {
+    return d;
+  }
 }

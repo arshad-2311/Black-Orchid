@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Leaf, ChevronRight, Award } from "lucide-react";
+import { Search, X, Leaf, ChevronRight, ChevronLeft, Award, Wine } from "lucide-react";
 import { apiGet } from "@/lib/api";
 import { IMAGES } from "@/lib/images";
 import type { MenuCategory, MenuItem } from "@/lib/types";
@@ -20,6 +20,16 @@ export function MenuView() {
   const [query, setQuery] = useState("");
   const [vegOnly, setVegOnly] = useState(false);
   const [showcaseIndex, setShowcaseIndex] = useState<number | null>(null);
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollCategory = (dir: "left" | "right") => {
+    if (categoryScrollRef.current) {
+      categoryScrollRef.current.scrollBy({
+        left: dir === "left" ? -280 : 280,
+        behavior: "smooth",
+      });
+    }
+  };
 
   useEffect(() => {
     apiGet<MenuCategory[]>("/api/menu").then(setCategories).catch(() => {});
@@ -94,17 +104,39 @@ export function MenuView() {
               onChange={(v) => setActive(v)}
             />
           </div>
-          {/* Desktop: category pills */}
-          <div className="hidden py-4 lg:flex lg:items-center lg:justify-between lg:gap-8">
-            <div className="no-scrollbar -mx-1 flex items-center gap-1 overflow-x-auto px-1">
-              <CategoryPill active={active === "ALL"} onClick={() => setActive("ALL")}>
-                All
-              </CategoryPill>
-              {categories.map((c) => (
-                <CategoryPill key={c.id} active={active === c.id} onClick={() => setActive(c.id)}>
-                  {c.name}
+          {/* Desktop: category pills with left/right direction buttons */}
+          <div className="hidden py-4 lg:flex lg:items-center lg:justify-between lg:gap-6">
+            <div className="relative flex items-center gap-1.5 min-w-0 flex-1">
+              <button
+                type="button"
+                onClick={() => scrollCategory("left")}
+                aria-label="Previous categories"
+                title="Previous categories"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-card/80 text-foreground transition-all duration-200 hover:border-gold/50 hover:text-gold hover:bg-gold/10"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+
+              <div ref={categoryScrollRef} className="no-scrollbar flex items-center gap-1 overflow-x-auto scroll-smooth px-1 py-1">
+                <CategoryPill active={active === "ALL"} onClick={() => setActive("ALL")}>
+                  All
                 </CategoryPill>
-              ))}
+                {categories.map((c) => (
+                  <CategoryPill key={c.id} active={active === c.id} onClick={() => setActive(c.id)}>
+                    {c.name}
+                  </CategoryPill>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => scrollCategory("right")}
+                aria-label="Next categories"
+                title="Next categories"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-card/80 text-foreground transition-all duration-200 hover:border-gold/50 hover:text-gold hover:bg-gold/10"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
 
             <div className="flex items-center gap-3">
@@ -271,6 +303,11 @@ function DishRow({ item, categoryName, index, onOpen }: { item: MenuItem; catego
               Chef's Pick
             </span>
           )}
+          {item.winePairing && (
+            <span className="flex items-center gap-1 rounded-full border border-gold/40 bg-gold/15 px-2.5 py-0.5 font-sans text-[9px] font-semibold uppercase tracking-[0.2em] text-gold">
+              <Wine className="h-2.5 w-2.5" /> Wine Pair
+            </span>
+          )}
           {!item.available && (
             <span className="rounded-full border border-red-500/40 bg-red-500/[0.06] px-2.5 py-0.5 font-sans text-[9px] font-semibold uppercase tracking-[0.2em] text-red-400">
               Sold out
@@ -289,7 +326,19 @@ function DishRow({ item, categoryName, index, onOpen }: { item: MenuItem; catego
       {/* Price + view hint */}
       <div className="flex shrink-0 flex-col items-end justify-center gap-1 pt-1 sm:items-center sm:flex-row sm:gap-3">
         <span className="font-[family-name:var(--font-playfair)] text-xl font-semibold text-gold sm:text-2xl">
-          ${item.price}
+          {item.variants && item.variants.length > 0 ? (
+            (() => {
+              const prices = item.variants.map((v) => v.price).filter((p) => typeof p === "number" && p > 0);
+              if (prices.length === 0) return item.price ? `₹${item.price}` : "";
+              const min = Math.min(...prices);
+              const max = Math.max(...prices);
+              return min === max ? `₹${min}` : `₹${min} – ₹${max}`;
+            })()
+          ) : item.price !== null && item.price !== undefined ? (
+            `₹${item.price}`
+          ) : (
+            ""
+          )}
         </span>
         <span className="hidden items-center gap-1 font-sans text-[10px] uppercase tracking-[0.2em] text-muted-foreground opacity-0 transition-opacity duration-300 group-hover:opacity-100 sm:flex">
           View <ChevronRight className="h-3 w-3" />

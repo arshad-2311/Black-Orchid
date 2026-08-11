@@ -127,6 +127,40 @@ export function AboutView({ settings }: { settings: SiteSettings | null }) {
         </RevealGroup>
       </section>
 
+      {/* ============== WHY CHOOSE US (5 VERIFIED PILLARS) ============== */}
+      <section className="relative bg-[#0A0A0C] py-28 sm:py-36 border-t border-white/[0.06]">
+        <div className="mx-auto max-w-7xl px-6 sm:px-10">
+          <div className="mx-auto max-w-3xl text-center">
+            <Eyebrow className="mb-5 justify-center">The Black Orchid Experience</Eyebrow>
+            <RevealText
+              text="Why Choose Us"
+              as="h2"
+              className="font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.1] tracking-luxe text-foreground sm:text-6xl"
+            />
+          </div>
+
+          <RevealGroup className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { num: "01", title: "Signature Chef's", desc: "Crafted culinary creations prepared by master chefs using premium hand-selected ingredients." },
+              { num: "02", title: "Premium Food Taste", desc: "An extraordinary balance of authentic flavours, refined textures, and modern presentation." },
+              { num: "03", title: "Curated Menu Options", desc: "Extensive multi-cuisine offerings featuring starters, mains, desserts, and handcrafted cocktails." },
+              { num: "04", title: "Easy Location Access", desc: "Conveniently located in Anna Nagar East, Chennai, with seamless access and parking." },
+              { num: "05", title: "Vibrant Atmosphere", desc: "A stylish restobar ambiance combining rich music, warm lighting, and elevated nightlife." },
+            ].map((pillar) => (
+              <RevealItem key={pillar.num} className="glass-cinema rounded-[1.5rem] p-8 border border-white/[0.08]">
+                <span className="font-sans text-xs font-semibold uppercase tracking-[0.25em] text-gold">{pillar.num}</span>
+                <h3 className="mt-3 font-[family-name:var(--font-playfair)] text-2xl font-semibold text-foreground">
+                  {pillar.title}
+                </h3>
+                <p className="mt-3 font-[family-name:var(--font-cormorant)] text-lg text-muted-foreground leading-relaxed">
+                  {pillar.desc}
+                </p>
+              </RevealItem>
+            ))}
+          </RevealGroup>
+        </div>
+      </section>
+
       {/* ============== PHILOSOPHY ============== */}
       <section className="relative bg-background py-28 sm:py-40">
         <div className="ambient-orb pointer-events-none absolute top-24 left-[-6%]" style={{ width: 380, height: 380, background: "rgba(212,175,55,0.05)" }} />
@@ -146,7 +180,7 @@ export function AboutView({ settings }: { settings: SiteSettings | null }) {
             transition={{ duration: 0.9, delay: 0.25 }}
             className="mx-auto mt-10 max-w-3xl font-[family-name:var(--font-cormorant)] text-2xl italic leading-relaxed text-muted-foreground sm:text-3xl"
           >
-            We believe dining is the oldest art form — a communion of craft, season, and company. Our chefs forage relationships with farmers, fishers, and artisans, translating their devotion onto every plate. Nothing leaves our kitchen that we would not proudly serve to our own family.
+            We believe dining is an experience — a communion of craft, season, and vibrant company. Located in Anna Nagar East, our kitchen and bar translate passion into every dish and cocktail.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 16 }}

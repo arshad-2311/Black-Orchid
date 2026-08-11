@@ -52,6 +52,34 @@ export const metadata: Metadata = {
   },
 };
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Restaurant",
+  name: "Black Orchid",
+  description:
+    "Black Orchid is a stylish restobar in Anna Nagar East, Chennai, combining exquisite food, crafted cocktails, vibrant music, and elevated dining experiences.",
+  servesCuisine: ["Multi-Cuisine", "Asian", "Indian", "Cocktails"],
+  telephone: "+91 95850 18502",
+  email: "boan.reservations@gmail.com",
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "G Block, L33, 1st Avenue, R.V. Nagar, Brindhavan Colony, VOC Nagar, Anna Nagar East",
+    addressLocality: "Chennai",
+    addressRegion: "Tamil Nadu",
+    postalCode: "600102",
+    addressCountry: "IN",
+  },
+  openingHoursSpecification: [
+    {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+      opens: "11:00",
+      closes: "23:00",
+    },
+  ],
+  acceptsReservations: "True",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -59,6 +87,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${playfair.variable} ${cormorant.variable} antialiased bg-background text-foreground relative`}
       >

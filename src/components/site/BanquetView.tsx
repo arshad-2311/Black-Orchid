@@ -1,15 +1,32 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Car, Check, Music, PartyPopper, Sparkles, Users } from "lucide-react";
+import { Calendar, Car, Check, Music, PartyPopper, Sparkles, Users } from "lucide-react";
 import { IMAGES } from "@/lib/images";
 import { Eyebrow, LuxuryButton, OrnamentDivider } from "./primitives";
 import { ImageReveal, RevealGroup, RevealItem, RevealText } from "./motion";
 import { useApp } from "@/lib/store";
-import type { SiteSettings } from "@/lib/types";
+import { apiGet } from "@/lib/api";
+import type { SiteSettings, EventItem } from "@/lib/types";
 
 export function BanquetView({ settings }: { settings: SiteSettings | null }) {
   const { setView } = useApp();
+  const [events, setEvents] = useState<EventItem[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    apiGet<EventItem[]>("/api/events")
+      .then((data) => {
+        if (alive && Array.isArray(data)) {
+          setEvents(data.filter((e) => e.published));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const amenities = [
     { Icon: Users, title: "Grand Capacity", desc: settings?.banquetCapacity || "Up to 300 guests" },
@@ -39,7 +56,7 @@ export function BanquetView({ settings }: { settings: SiteSettings | null }) {
 
         <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}>
-            <Eyebrow className="mb-6 justify-center">Banquet Facility</Eyebrow>
+            <Eyebrow className="mb-6 justify-center">Banquet Facility & Special Events</Eyebrow>
           </motion.div>
           <h1 className="font-[family-name:var(--font-playfair)] text-6xl font-semibold leading-[1.02] tracking-luxe text-foreground drop-shadow-[0_4px_30px_rgba(10,10,10,0.6)] sm:text-7xl lg:text-8xl">
             <RevealText text="Celebrations" as="span" delay={0.2} className="inline-block" />
@@ -76,8 +93,67 @@ export function BanquetView({ settings }: { settings: SiteSettings | null }) {
         </div>
       </section>
 
+      {/* ============== UPCOMING EVENTS SECTION (Dynamically Managed in Admin) ============== */}
+      {events.length > 0 && (
+        <section className="relative bg-background py-16 sm:py-24 border-t border-white/10">
+          <div className="mx-auto max-w-7xl px-6 sm:px-10">
+            <div className="mb-12 max-w-2xl">
+              <Eyebrow className="mb-4">Special Events</Eyebrow>
+              <RevealText
+                text="Upcoming Celebrations"
+                as="h2"
+                className="font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.05] tracking-luxe text-foreground sm:text-5xl"
+              />
+              <p className="mt-3 font-[family-name:var(--font-cormorant)] text-xl italic text-muted-foreground">
+                Join us for exclusive dining experiences and festive gatherings.
+              </p>
+            </div>
+
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {events.map((e) => (
+                <motion.div
+                  key={e.id}
+                  whileHover={{ y: -6 }}
+                  transition={{ duration: 0.25 }}
+                  className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-card/60 backdrop-blur-md transition-colors hover:border-gold/40 hover:bg-card"
+                >
+                  {e.image && (
+                    <div className="relative h-52 w-full overflow-hidden">
+                      <img
+                        src={e.image}
+                        alt={e.title}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
+                    </div>
+                  )}
+                  <div className="flex flex-1 flex-col p-6">
+                    <div className="mb-3 flex items-center gap-2 font-mono text-xs text-gold">
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span>{e.date}</span>
+                    </div>
+                    <h3 className="font-[family-name:var(--font-playfair)] text-2xl font-semibold text-foreground">
+                      {e.title}
+                    </h3>
+                    <p className="mt-3 flex-1 font-[family-name:var(--font-cormorant)] text-base italic leading-relaxed text-muted-foreground">
+                      {e.description}
+                    </p>
+                    <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between">
+                      <span className="font-sans text-xs uppercase tracking-widest text-gold/80">Special Event</span>
+                      <LuxuryButton variant="outline" onClick={() => setView("reservation")}>
+                        Reserve Table
+                      </LuxuryButton>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ============== AMENITIES ============== */}
-      <section className="relative bg-background pb-24 sm:pb-32">
+      <section className="relative bg-background pb-24 sm:pb-32 pt-16">
         <div className="mx-auto max-w-7xl px-6 sm:px-10">
           <div className="max-w-2xl">
             <Eyebrow className="mb-6">World-Class Amenities</Eyebrow>

@@ -76,17 +76,19 @@ export function LuxuryButton({
 }) {
   const [ripples, setRipples] = useState<{ x: number; y: number; id: number }[]>([]);
   const idRef = useRef(0);
+  const timersRef = useRef<number[]>([]);
   const magRef = useMagnetic<HTMLButtonElement>({ strength: 0.25 });
 
   const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const id = idRef.current++;
     setRipples((r) => [...r, { x: e.clientX - rect.left, y: e.clientY - rect.top, id }]);
-    setTimeout(() => setRipples((r) => r.filter((rp) => rp.id !== id)), 650);
+    const t = window.setTimeout(() => setRipples((r) => r.filter((rp) => rp.id !== id)), 650);
+    timersRef.current.push(t);
     onClick?.();
   };
 
-  const base = "ripple-container relative inline-flex items-center justify-center gap-2.5 rounded-full px-8 py-4 font-sans text-[12px] font-semibold uppercase tracking-[0.2em] transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:pointer-events-none overflow-hidden";
+  const base = "ripple-container relative inline-flex items-center justify-center gap-2.5 rounded-full px-8 py-4 font-sans text-[12px] font-semibold uppercase tracking-[0.2em] transition-all duration-200 active:scale-[0.97] active:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:pointer-events-none overflow-hidden";
   const variants = {
     solid: "bg-gold-gradient text-black glow-gold-hover hover:-translate-y-0.5",
     outline: "border border-gold/40 text-gold hover:bg-gold/8 hover:border-gold/70 backdrop-blur-sm",

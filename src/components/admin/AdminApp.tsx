@@ -58,6 +58,18 @@ export function AdminApp() {
     return localStorage.getItem(COLLAPSE_KEY) === "1";
   });
 
+  // Validate token session with server on mount
+  useEffect(() => {
+    if (adminToken) {
+      import("@/lib/api").then(({ apiGet }) => {
+        apiGet("/api/admin/me").catch(() => {
+          clearAdmin();
+          toast.error("Session expired. Please sign in again.");
+        });
+      });
+    }
+  }, [adminToken, clearAdmin]);
+
   // Persist collapse preference (no setState in effect body — just a side-effect write)
   useEffect(() => {
     localStorage.setItem(COLLAPSE_KEY, collapsed ? "1" : "0");

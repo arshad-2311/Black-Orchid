@@ -31,16 +31,17 @@ export function ContactView({ settings }: { settings: SiteSettings | null }) {
   };
 
   const info = [
-    { Icon: MapPin, label: "Address", value: settings?.address, href: undefined as string | undefined },
-    { Icon: Phone, label: "Phone", value: settings?.phone, href: settings?.phone ? `tel:${settings.phone}` : undefined },
-    { Icon: Mail, label: "Email", value: settings?.email, href: settings?.email ? `mailto:${settings.email}` : undefined },
-    { Icon: Clock, label: "Weekday Hours", value: settings?.hoursWeekday, href: undefined },
+    { Icon: MapPin, label: "Address", value: settings?.address || "G Block, L33, 1st Avenue, R.V. Nagar, Brindhavan Colony, VOC Nagar, Anna Nagar East, Chennai, Tamil Nadu – 600102", href: undefined as string | undefined },
+    { Icon: Phone, label: "Primary Contact", value: settings?.phone || "+91 95850 18502", href: `tel:${(settings?.phone || "+919585018502").replace(/\s+/g, "")}` },
+    ...(settings?.phoneSecondary ? [{ Icon: Phone, label: "Secondary Contact", value: settings.phoneSecondary, href: `tel:${settings.phoneSecondary.replace(/\s+/g, "")}` }] : []),
+    { Icon: Mail, label: "Email", value: settings?.email || "boan.reservations@gmail.com", href: `mailto:${settings?.email || "boan.reservations@gmail.com"}` },
+    { Icon: Clock, label: "Opening Hours", value: `Monday – Sunday: ${settings?.hoursWeekday || "11:00 AM – 11:00 PM"}`, href: undefined },
   ];
 
   const socials = [
-    { Icon: Instagram, href: settings?.instagram },
-    { Icon: Facebook, href: settings?.facebook },
-    { Icon: Twitter, href: settings?.twitter },
+    ...(settings?.facebook ? [{ Icon: Facebook, href: settings.facebook }] : [{ Icon: Facebook, href: "https://www.facebook.com/blackorchidchennai/" }]),
+    ...(settings?.instagram ? [{ Icon: Instagram, href: settings.instagram }] : []),
+    ...(settings?.twitter ? [{ Icon: Twitter, href: settings.twitter }] : []),
   ];
 
   return (
@@ -190,16 +191,28 @@ export function ContactView({ settings }: { settings: SiteSettings | null }) {
         </div>
       </section>
 
-      {/* ============== MAP ============== */}
+      {/* ============== MAP & DIRECTIONS ============== */}
       <section className="bg-background pb-24 sm:pb-32">
         <div className="mx-auto max-w-7xl px-6 sm:px-10">
-          <div className="overflow-hidden rounded-[1.5rem] border border-white/[0.06]">
-            <iframe
-              title="Black Orchid location"
-              src="https://www.openstreetmap.org/export/embed.html?bbox=-74.02%2C40.70%2C-73.98%2C40.72&layer=mapnik&marker=40.71%2C-74.00"
-              className="h-[400px] w-full grayscale contrast-110"
-              loading="lazy"
-            />
+          <div className="relative overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-white/[0.02] p-8 sm:p-12 text-center">
+            <Eyebrow className="mb-4 justify-center">Location & Navigation</Eyebrow>
+            <h3 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground sm:text-4xl">
+              Anna Nagar East, Chennai
+            </h3>
+            <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+              {settings?.address || "G Block, L33, 1st Avenue, R.V. Nagar, Brindhavan Colony, VOC Nagar, Anna Nagar East, Chennai, Tamil Nadu – 600102"}
+            </p>
+            <div className="mt-8 flex justify-center">
+              <a
+                href={settings?.mapEmbed || "https://maps.google.com/?q=Black+Orchid+Anna+Nagar+East+Chennai"}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <LuxuryButton variant="solid">
+                  <MapPin className="h-4 w-4" /> Get Directions
+                </LuxuryButton>
+              </a>
+            </div>
           </div>
         </div>
       </section>

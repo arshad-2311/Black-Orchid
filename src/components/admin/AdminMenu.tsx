@@ -528,7 +528,19 @@ export function AdminMenu() {
                             <p className="mt-0.5 truncate font-sans text-xs text-admin-muted">{item.description}</p>
                           ) : null}
                         </div>
-                        <span className="shrink-0 font-[family-name:var(--font-playfair)] text-lg font-semibold text-admin-gold">${item.price}</span>
+                        <span className="shrink-0 font-[family-name:var(--font-playfair)] text-lg font-semibold text-admin-gold">
+                          {item.variants && item.variants.length > 0
+                            ? (() => {
+                                const prices = item.variants.map((v) => v.price).filter((p) => typeof p === "number" && p > 0);
+                                if (prices.length === 0) return item.price ? `₹${item.price}` : "";
+                                const min = Math.min(...prices);
+                                const max = Math.max(...prices);
+                                return min === max ? `₹${min}` : `₹${min} – ₹${max}`;
+                              })()
+                            : item.price !== null && item.price !== undefined
+                            ? `₹${item.price}`
+                            : ""}
+                        </span>
                         <div className="flex shrink-0 gap-1 transition-opacity duration-200">
                           <button
                             onClick={() => setItemModal(item)}
@@ -635,6 +647,9 @@ type ItemFormState = {
   ingredients: string[];
   allergens: string[];
   servingSize: string;
+  winePairing: string;
+  tastingNotes: string;
+  pairingPrice: string;
 };
 
 function deriveItemForm(item: MenuItem | null, categories: MenuCategory[]): ItemFormState {
@@ -658,6 +673,9 @@ function deriveItemForm(item: MenuItem | null, categories: MenuCategory[]): Item
       ingredients: item.ingredients ?? [],
       allergens: item.allergens ?? [],
       servingSize: item.servingSize ?? "",
+      winePairing: item.winePairing ?? "",
+      tastingNotes: item.tastingNotes ?? "",
+      pairingPrice: item.pairingPrice ? String(item.pairingPrice) : "",
     };
   }
   return {
@@ -676,6 +694,9 @@ function deriveItemForm(item: MenuItem | null, categories: MenuCategory[]): Item
     ingredients: [],
     allergens: [],
     servingSize: "",
+    winePairing: "",
+    tastingNotes: "",
+    pairingPrice: "",
   };
 }
 
@@ -716,6 +737,9 @@ function ItemModal({
         ingredients: form.ingredients,
         allergens: form.allergens,
         servingSize: form.servingSize.trim(),
+        winePairing: form.winePairing.trim(),
+        tastingNotes: form.tastingNotes.trim(),
+        pairingPrice: form.pairingPrice ? Number(form.pairingPrice) : null,
       };
       if (item) await apiPatch(`/api/menu/${item.id}`, payload);
       else await apiPost("/api/menu", payload);
@@ -858,6 +882,34 @@ function ItemModal({
             placeholder="Type an allergen and press Enter"
             tone="red"
             suggestions={COMMON_ALLERGENS}
+          />
+        </section>
+
+        {/* ───────────── Sommelier & Beverage Pairing ───────────── */}
+        <section className="space-y-4">
+          <SectionLabel>Sommelier & Beverage Pairing</SectionLabel>
+          <div className="grid gap-4 md:grid-cols-2">
+            <AdminInput
+              label="Wine / Beverage Name"
+              value={form.winePairing}
+              onChange={(e) => set("winePairing", e.target.value)}
+              placeholder="e.g. 2021 Domaine Leflaive Puligny-Montrachet"
+            />
+            <AdminInput
+              label="Glass / Pairing Price ($)"
+              type="number"
+              step="0.01"
+              value={form.pairingPrice}
+              onChange={(e) => set("pairingPrice", e.target.value)}
+              placeholder="e.g. 45"
+            />
+          </div>
+          <AdminTextarea
+            label="Tasting Notes"
+            rows={2}
+            value={form.tastingNotes}
+            onChange={(e) => set("tastingNotes", e.target.value)}
+            placeholder="e.g. Notes of white peach, citrus blossom, and toasted brioche finish"
           />
         </section>
       </div>

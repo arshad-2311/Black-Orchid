@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   Save, Sparkles, Image as ImageIcon, BookOpen, GlassWater, Phone, Clock,
-  Share2, Search,
+  Share2, Search, Bell,
 } from "lucide-react";
 import { apiGet, apiPut } from "@/lib/api";
 import type { SiteSettings } from "@/lib/types";
@@ -89,13 +89,42 @@ export function AdminSettings() {
             <AdminTextarea label="Banquet Description" value={form.banquetDesc} onChange={(e) => set("banquetDesc", e.target.value)} rows={3} />
           </Section>
 
+          <Section title="Notification Settings" icon={Bell}>
+            <AdminInput
+              label="Restaurant Manager Email"
+              value={form.managerEmail || form.email || ""}
+              onChange={(e) => set("managerEmail", e.target.value)}
+              placeholder="manager@blackorchid.com"
+            />
+            <AdminInput
+              label="SMS Sender / Business Name"
+              value={form.smsSenderName || "Black Orchid Anna Nagar"}
+              onChange={(e) => set("smsSenderName", e.target.value)}
+              placeholder="Black Orchid Anna Nagar"
+            />
+            <div className="flex items-center gap-3 pt-1">
+              <input
+                id="notificationsEnabled"
+                type="checkbox"
+                checked={form.notificationsEnabled ?? true}
+                onChange={(e) => setForm((s) => (s ? { ...s, notificationsEnabled: e.target.checked } : s))}
+                className="h-4 w-4 rounded border-admin-gold/40 bg-admin-bg text-admin-gold focus:ring-admin-gold"
+              />
+              <label htmlFor="notificationsEnabled" className="font-sans text-xs font-medium text-admin-text">
+                Enable Automatic Reservation Alerts (Manager Email & Customer SMS)
+              </label>
+            </div>
+          </Section>
+
           <Section title="Contact Information" icon={Phone}>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <AdminInput label="Phone" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
-              <AdminInput label="Email" value={form.email} onChange={(e) => set("email", e.target.value)} />
+              <AdminInput label="Primary Phone" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
+              <AdminInput label="Secondary Phone (Optional)" value={form.phoneSecondary || ""} onChange={(e) => set("phoneSecondary", e.target.value)} />
             </div>
+            <AdminInput label="Email" value={form.email} onChange={(e) => set("email", e.target.value)} />
             <AdminInput label="Address" value={form.address} onChange={(e) => set("address", e.target.value)} />
             <AdminInput label="WhatsApp Number" value={form.whatsapp} onChange={(e) => set("whatsapp", e.target.value)} />
+            <AdminInput label="Google Maps Location URL" value={form.mapEmbed || ""} onChange={(e) => set("mapEmbed", e.target.value)} />
           </Section>
 
           <Section title="Business Hours" icon={Clock}>

@@ -10,6 +10,8 @@ import { motion, useMotionValue, useSpring } from "framer-motion";
  */
 type CursorState = "default" | "hover" | "view" | "drag" | "text";
 
+const BASE_SIZE = 36;
+
 export function Cursor() {
   const [state, setState] = useState<CursorState>("default");
   const [label, setLabel] = useState("");
@@ -19,6 +21,7 @@ export function Cursor() {
   const ringY = useSpring(y, { stiffness: 400, damping: 28, mass: 0.4 });
   const dotX = useSpring(x, { stiffness: 800, damping: 35 });
   const dotY = useSpring(y, { stiffness: 800, damping: 35 });
+  const rafId = useRef<number | null>(null);
 
   useEffect(() => {
     if (!window.matchMedia("(pointer: fine)").matches) return;
@@ -27,46 +30,53 @@ export function Cursor() {
     const move = (e: MouseEvent) => {
       x.set(e.clientX);
       y.set(e.clientY);
-      const el = e.target as HTMLElement;
 
-      // Determine cursor state from the hovered element
-      const interactive = el.closest("a, button, [data-cursor='hover'], [role='button']");
-      const imageView = el.closest("[data-cursor='view'], img[class*='object-cover'], .group img");
-      const dragEl = el.closest("[data-cursor='drag'], .no-scrollbar");
-      const textEl = el.closest("input, textarea, [contenteditable]");
+      if (rafId.current !== null) return;
 
-      if (textEl) {
-        setState("text");
-        setLabel("");
-      } else if (imageView) {
-        setState("view");
-        setLabel("");
-      } else if (dragEl) {
-        setState("drag");
-        setLabel("");
-      } else if (interactive) {
-        setState("hover");
-        // Check for data-cursor-label attribute
-        const labeled = el.closest("[data-cursor-label]");
-        setLabel(labeled?.getAttribute("data-cursor-label") || "");
-      } else {
-        setState("default");
-        setLabel("");
-      }
+      rafId.current = requestAnimationFrame(() => {
+        rafId.current = null;
+        const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+        if (!el) return;
+
+        const interactive = el.closest("a, button, [data-cursor='hover'], [role='button']");
+        const imageView = el.closest("[data-cursor='view'], img[class*='object-cover'], .group img");
+        const dragEl = el.closest("[data-cursor='drag'], .no-scrollbar");
+        const textEl = el.closest("input, textarea, [contenteditable]");
+
+        if (textEl) {
+          setState("text");
+          setLabel("");
+        } else if (imageView) {
+          setState("view");
+          setLabel("");
+        } else if (dragEl) {
+          setState("drag");
+          setLabel("");
+        } else if (interactive) {
+          setState("hover");
+          const labeled = el.closest("[data-cursor-label]");
+          setLabel(labeled?.getAttribute("data-cursor-label") || "");
+        } else {
+          setState("default");
+          setLabel("");
+        }
+      });
     };
-    window.addEventListener("mousemove", move);
+
+    window.addEventListener("mousemove", move, { passive: true });
     return () => {
       window.removeEventListener("mousemove", move);
+      if (rafId.current !== null) cancelAnimationFrame(rafId.current);
       document.documentElement.classList.remove("cursor-host");
     };
   }, [x, y]);
 
-  const ringSize = {
-    default: 36,
-    hover: label ? 64 : 48,
-    view: 56,
-    drag: 52,
-    text: 4,
+  const ringScale = {
+    default: 1,
+    hover: label ? 1.77 : 1.33,
+    view: 1.55,
+    drag: 1.44,
+    text: 0.11,
   }[state];
 
   const ringBg = {
@@ -92,19 +102,19 @@ export function Cursor() {
         className="cursor-dot"
         style={{ x: dotX, y: dotY, translateX: "-50%", translateY: "-50%" }}
         animate={{ opacity: state === "text" ? 0 : 1, scale: state === "hover" ? 0.5 : 1 }}
-        transition={{ duration: 0.2 }}
+        transition={{ duration: 0.16, ease: "easeOut" }}
       />
-      {/* Trailing ring — springy, context-aware */}
+      {/* Trailing ring — springy, context-aware, GPU-scaled */}
       <motion.div
         className="cursor-ring"
         style={{
           x: ringX, y: ringY, translateX: "-50%", translateY: "-50%",
-          width: ringSize, height: ringSize,
+          width: BASE_SIZE, height: BASE_SIZE,
           backgroundColor: ringBg,
           borderColor: ringBorder,
         }}
-        animate={{ width: ringSize, height: ringSize }}
-        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        animate={{ scale: ringScale }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
       >
         {/* Label text inside the ring (e.g. "View", "Reserve") */}
         {label && state === "hover" && (
@@ -112,7 +122,7 @@ export function Cursor() {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.16 }}
             className="absolute inset-0 flex items-center justify-center font-sans text-[9px] font-semibold uppercase tracking-[0.15em] text-gold"
           >
             {label}
@@ -135,3 +145,4 @@ export function Cursor() {
     </>
   );
 }
+

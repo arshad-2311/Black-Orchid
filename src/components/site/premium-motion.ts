@@ -89,8 +89,10 @@ export function useImageReveal<T extends HTMLElement = HTMLDivElement>(
     const ctx = gsap.context(() => {
       gsap.fromTo(el,
         { clipPath: "inset(0% 0% 100% 0%)", scale: 1.2 },
-        { clipPath: "inset(0% 0% 0% 0%)", scale: 1.05, duration, delay, ease: "power3.out",
-          scrollTrigger: { trigger: el, start: "top 82%", once } });
+        {
+          clipPath: "inset(0% 0% 0% 0%)", scale: 1.05, duration, delay, ease: "power3.out",
+          scrollTrigger: { trigger: el, start: "top 82%", once }
+        });
     }, el);
     return () => ctx.revert();
   }, [delay, duration, once]);
@@ -222,105 +224,87 @@ export function usePageTransition() {
     if (isTransitioning) { callback(); return; }
     isTransitioning = true;
 
-    const { x, y, variant } = originRef.current;
-    const vx = x || window.innerWidth / 2;
-    const vy = y || window.innerHeight / 2;
+    const { variant } = originRef.current;
+    const tint = VARIANT_TINTS[variant] || "rgba(10,10,12,0.95)";
+    const bloom = VARIANT_BLOOM[variant] || "rgba(212,175,55,0.15)";
 
-    // Calculate max radius to cover the screen from the origin point
-    const maxR = Math.hypot(
-      Math.max(vx, window.innerWidth - vx),
-      Math.max(vy, window.innerHeight - vy)
-    );
-
-    const tint = VARIANT_TINTS[variant];
-    const bloom = VARIANT_BLOOM[variant];
-
-    // --- Build the transition layers ---
+    // --- Build the vertical curtain wipe-up container (sample1.mp4 physics) ---
     const container = document.createElement("div");
     container.style.cssText = "position:fixed;inset:0;z-index:9998;pointer-events:none;overflow:hidden;";
 
-    // Layer 1: Base glass circle (expands from origin)
-    const glass = document.createElement("div");
-    glass.style.cssText = `position:absolute;border-radius:50%;left:${vx}px;top:${vy}px;width:0;height:0;background:${tint};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);transform:translate(-50%,-50%);overflow:hidden;`;
+    // Main curtain panel — full viewport, wipes vertically (y: 100% -> 0% -> -100%)
+    const curtain = document.createElement("div");
+    curtain.style.cssText = `position:absolute;inset:0;width:100vw;height:100vh;background:${tint};backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid rgba(212,175,55,0.4);border-bottom:1px solid rgba(212,175,55,0.4);transform:translateY(100%);will-change:transform;overflow:hidden;box-shadow:0 -20px 60px rgba(0,0,0,0.7);`;
 
-    // Layer 2: Gold radial bloom (inside the glass)
+    // Ambient radial gold bloom inside curtain
     const bloomLayer = document.createElement("div");
-    bloomLayer.style.cssText = `position:absolute;inset:0;background:radial-gradient(circle at ${vx}px ${vy}px, ${bloom} 0%, transparent 60%);`;
+    bloomLayer.style.cssText = `position:absolute;inset:0;background:radial-gradient(circle at 50% 50%, ${bloom} 0%, transparent 65%);pointer-events:none;`;
 
-    // Layer 3: Moving gold reflection streak
-    const reflection = document.createElement("div");
-    reflection.style.cssText = "position:absolute;inset:0;background:linear-gradient(135deg, transparent 30%, rgba(212,175,55,0.06) 50%, transparent 70%);transform:translateX(-100%);";
-
-    // Layer 4: Film grain
+    // Film grain overlay inside curtain
     const grain = document.createElement("div");
-    grain.style.cssText = "position:absolute;inset:0;opacity:0.04;mix-blend-overlay;background-image:url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\");";
+    grain.style.cssText = "position:absolute;inset:0;opacity:0.03;mix-blend-overlay;pointer-events:none;background-image:url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\");";
 
-    // Layer 5: Black Orchid logo wordmark (appears at full coverage)
-    const logo = document.createElement("div");
-    logo.style.cssText = "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;";
-    logo.innerHTML = `
-      <div style="text-align:center;">
-        <p style="font-family:var(--font-playfair),serif;font-size:clamp(2rem,6vw,4rem);font-weight:600;letter-spacing:0.04em;background:linear-gradient(135deg,#f0d878,#d4af37,#b8902a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;">Black Orchid</p>
-        <p style="margin-top:0.5rem;font-size:0.6rem;letter-spacing:0.4em;text-transform:uppercase;color:rgba(212,175,55,0.5);">Fine Dining</p>
+    // Centered luxury wordmark reveal
+    const wordmark = document.createElement("div");
+    wordmark.style.cssText = "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(0.96);will-change:transform,opacity;";
+    wordmark.innerHTML = `
+      <div style="text-align:center;padding:0 1rem;">
+        <span style="display:inline-block;font-size:0.7rem;letter-spacing:0.35em;text-transform:uppercase;color:#d4af37;margin-bottom:0.75rem;opacity:0.85;">✦ EST. 2003 ✦</span>
+        <h2 style="font-family:var(--font-playfair),serif;font-size:clamp(2.2rem,5.5vw,4.5rem);font-weight:600;line-height:1.05;letter-spacing:0.04em;background:linear-gradient(135deg,#f0d878 0%,#d4af37 50%,#b8902a 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;">Black Orchid</h2>
+        <p style="margin-top:0.75rem;font-family:var(--font-cormorant),serif;font-size:clamp(1.1rem,2vw,1.6rem);font-style:italic;color:rgba(245,240,232,0.7);">Fine Dining & Banquet</p>
       </div>
     `;
 
-    // Page darken layer (behind the glass)
-    const darken = document.createElement("div");
-    darken.style.cssText = "position:absolute;inset:0;background:rgba(0,0,0,0);";
-
-    glass.appendChild(bloomLayer);
-    glass.appendChild(reflection);
-    glass.appendChild(grain);
-    glass.appendChild(logo);
-    container.appendChild(darken);
-    container.appendChild(glass);
+    curtain.appendChild(bloomLayer);
+    curtain.appendChild(grain);
+    curtain.appendChild(wordmark);
+    container.appendChild(curtain);
     document.body.appendChild(container);
 
+    // --- GSAP Timeline: Vertical Curtain Wipe-Up (y: 100% -> 0% -> -100%) ---
     const tl = gsap.timeline({
       onComplete: () => {
         container.remove();
         isTransitioning = false;
-        // Refresh ScrollTrigger after transition
+        document.body.style.overflow = "";
+        document.body.style.pointerEvents = "";
+        window.scrollTo(0, 0);
         ScrollTrigger.refresh();
       },
     });
 
-    // Phase 1: Darken current page subtly (0.15s)
-    tl.to(darken, { backgroundColor: "rgba(0,0,0,0.3)", duration: 0.15, ease: "power2.out" }, 0);
+    // Phase 1: Wipe curtain UP from bottom to full screen (y: 100% -> 0%)
+    tl.to(curtain, {
+      y: "0%",
+      duration: 0.45,
+      ease: "power3.inOut",
+    }, 0);
 
-    // Phase 2: Liquid glass expands from origin (0.4s)
-    tl.to(glass, {
-      width: maxR * 2.2, height: maxR * 2.2, duration: 0.4, ease: "power3.inOut",
-    }, 0.05);
-
-    // Phase 3: Reflection streak sweeps across (0.5s, starts mid-expansion)
-    tl.to(reflection, {
-      x: "100%", duration: 0.5, ease: "power2.inOut",
-    }, 0.15);
-
-    // Phase 4: Logo appears (0.2s, at ~60% expansion)
-    tl.to(logo, {
-      opacity: 1, duration: 0.2, ease: "power2.out",
+    // Phase 2: Fade & scale wordmark in mid-swipe
+    tl.to(wordmark, {
+      opacity: 1,
+      scale: 1,
+      duration: 0.22,
+      ease: "power2.out",
     }, 0.2);
 
-    // Phase 5: Swap content (at the midpoint, behind the overlay)
-    tl.add(() => callback(), 0.35);
+    // Phase 3: Swap React view at full screen cover (time = 0.42s)
+    tl.add(() => callback(), 0.42);
 
-    // Phase 6: Logo fades (0.15s)
-    tl.to(logo, {
-      opacity: 0, duration: 0.15, ease: "power2.in",
+    // Phase 4: Fade wordmark out
+    tl.to(wordmark, {
+      opacity: 0,
+      scale: 0.96,
+      duration: 0.18,
+      ease: "power2.in",
+    }, 0.44);
+
+    // Phase 5: Wipe curtain UP off the top of the screen (y: 0% -> -100%)
+    tl.to(curtain, {
+      y: "-100%",
+      duration: 0.45,
+      ease: "power3.inOut",
     }, 0.45);
-
-    // Phase 7: Glass retracts upward (0.35s) — reveal new page
-    tl.to(glass, {
-      y: "-100%", opacity: 0, duration: 0.35, ease: "power3.inOut",
-    }, 0.5);
-
-    // Phase 8: Clean up darken
-    tl.to(darken, {
-      opacity: 0, duration: 0.2, ease: "power2.out",
-    }, 0.5);
   }, []);
 
   return { transition };

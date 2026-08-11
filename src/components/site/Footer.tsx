@@ -109,8 +109,16 @@ export function Footer({ settings }: { settings: SiteSettings | null }) {
             <p className="font-sans text-[10px] uppercase tracking-[0.3em] text-gold/70">Visit</p>
             <ul className="mt-5 space-y-4 text-sm text-muted-foreground">
               <li className="flex gap-3"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><span>{settings?.address}</span></li>
-              <li className="flex gap-3"><Phone className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><a href={`tel:${settings?.phone}`} className="hover:text-gold">{settings?.phone}</a></li>
-              <li className="flex gap-3"><Mail className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><a href={`mailto:${settings?.email}`} className="hover:text-gold">{settings?.email}</a></li>
+              <li className="flex gap-3">
+                <Phone className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" />
+                <div className="flex flex-col">
+                  <a href={`tel:${(settings?.phone || "+919585018502").replace(/\s+/g, "")}`} className="hover:text-gold transition-colors">{settings?.phone || "+91 95850 18502"}</a>
+                  {settings?.phoneSecondary && (
+                    <a href={`tel:${settings.phoneSecondary.replace(/\s+/g, "")}`} className="text-xs text-muted-foreground/70 hover:text-gold transition-colors">{settings.phoneSecondary}</a>
+                  )}
+                </div>
+              </li>
+              <li className="flex gap-3"><Mail className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><a href={`mailto:${settings?.email || "boan.reservations@gmail.com"}`} className="hover:text-gold transition-colors">{settings?.email || "boan.reservations@gmail.com"}</a></li>
             </ul>
           </div>
 
@@ -118,8 +126,7 @@ export function Footer({ settings }: { settings: SiteSettings | null }) {
           <div>
             <p className="font-sans text-[10px] uppercase tracking-[0.3em] text-gold/70">Hours</p>
             <ul className="mt-5 space-y-4 text-sm text-muted-foreground">
-              <li className="flex gap-3"><Clock className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><div><p className="text-foreground">Mon – Fri</p><p>{settings?.hoursWeekday}</p></div></li>
-              <li className="flex gap-3"><Clock className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><div><p className="text-foreground">Sat – Sun</p><p>{settings?.hoursWeekend}</p></div></li>
+              <li className="flex gap-3"><Clock className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><div><p className="text-foreground">Monday – Sunday</p><p>{settings?.hoursWeekday || "11:00 AM – 11:00 PM"}</p></div></li>
             </ul>
           </div>
         </div>

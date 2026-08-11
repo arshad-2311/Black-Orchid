@@ -12,13 +12,22 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const data: Record<string, unknown> = {};
   const allowed = [
     "name","tagline","description","shortDescription","price","image","categoryId",
-    "available","veg","spice","featured","chefRecommended","servingSize","order",
+    "available","veg","dietaryType","spice","featured","chefRecommended","servingSize","winePairing",
+    "tastingNotes","pairingPrice","order",
   ];
   for (const k of allowed) if (k in body) data[k] = body[k];
-  if (data.price !== undefined) data.price = Number(data.price);
+  if ("price" in body) data.price = body.price !== null && body.price !== undefined ? Number(body.price) : 0;
+  if (data.pairingPrice !== undefined) {
+    const pp = Number(data.pairingPrice);
+    data.pairingPrice = Number.isFinite(pp) && pp > 0 ? pp : null;
+  }
   if (data.spice !== undefined) {
     const s = Number(data.spice);
     data.spice = Number.isFinite(s) ? s : 0;
+  }
+  if ("variants" in body) {
+    const vars: any[] = Array.isArray(body.variants) ? body.variants : [];
+    data.variants = JSON.stringify(vars);
   }
   if ("images" in body) {
     const imgs: string[] = Array.isArray(body.images) ? body.images : [];

@@ -14,7 +14,8 @@ export async function PUT(req: Request) {
   // Only allow known fields
   const allowed: string[] = [
     "restaurantName","tagline","heroTitle","heroSubtitle","aboutTitle","aboutBody",
-    "phone","email","address","mapEmbed","hoursWeekday","hoursWeekend",
+    "phone","phoneSecondary","email","managerEmail","smsSenderName","notificationsEnabled",
+    "address","mapEmbed","hoursWeekday","hoursWeekend",
     "instagram","facebook","twitter","whatsapp","banquetCapacity","banquetDesc",
     "metaTitle","metaDesc",
   ];

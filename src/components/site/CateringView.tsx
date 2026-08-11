@@ -185,11 +185,11 @@ export function CateringView({ settings }: { settings: SiteSettings | null }) {
           >
             <p className="font-sans text-[11px] uppercase tracking-[0.3em] text-muted-foreground">Speak with our events team</p>
             <a
-              href={`tel:${settings?.phone || ""}`}
+              href={`tel:${(settings?.phone || "+919585018502").replace(/\s+/g, "")}`}
               className="inline-flex items-center gap-3 font-[family-name:var(--font-cormorant)] text-3xl italic text-gold transition-colors hover:text-gold/80 sm:text-4xl"
             >
               <Phone className="h-6 w-6" />
-              {settings?.phone || "+1 (212) 555-0148"}
+              {settings?.phone || "+91 95850 18502"}
             </a>
           </motion.div>
         </div>

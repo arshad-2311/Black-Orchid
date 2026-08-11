@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Check, X, CheckCheck, Ban, Trash2, Download, Printer,
-  ArrowUp, ArrowDown, ChevronsUpDown,
+  ArrowUp, ArrowDown, ChevronsUpDown, QrCode, Sparkles,
 } from "lucide-react";
 import { apiGet, apiPatch, apiDelete } from "@/lib/api";
 import type { Reservation } from "@/lib/types";
@@ -29,6 +29,7 @@ export function AdminReservations() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [hostCheckInOpen, setHostCheckInOpen] = useState(false);
 
   const fetchList = (s: string) => {
     apiGet<Reservation[]>(`/api/reservations${s !== "ALL" ? `?status=${s}` : ""}`)
@@ -150,8 +151,8 @@ export function AdminReservations() {
 
   // CSV export (unchanged logic)
   const exportCsv = () => {
-    const rows = [["Name", "Phone", "Email", "Date", "Time", "Guests", "Status", "Special"]];
-    sorted.forEach((r) => rows.push([r.name, r.phone, r.email, r.date, r.time, String(r.guests), r.status, r.special || ""]));
+    const rows = [["Name", "Phone", "Email", "Date", "Time", "Adult Guests", "Kids", "Status", "Special"]];
+    sorted.forEach((r) => rows.push([r.name, r.phone, r.email, r.date, r.time, String(r.guests), String(r.kids || 0), r.status, r.special || ""]));
     const csv = rows.map((r) => r.map((c) => `"${(c || "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a");
@@ -202,24 +203,11 @@ export function AdminReservations() {
                 onChange={(e) => onQueryChange(e.target.value)}
               />
             </div>
-            <div className="flex gap-1.5">
-              {STATUSES.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => onStatusChange(s)}
-                  className={cn(
-                    "rounded-full px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-wider transition-all duration-200",
-                    status === s
-                      ? "admin-gold-bg text-black"
-                      : "border border-admin-border text-admin-muted hover:text-admin-gold"
-                  )}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-            <AdminButton variant="outline" size="sm" onClick={exportCsv}>
+            <AdminButton variant="outline" size="sm" onClick={exportCsv} disabled={safeList.length === 0}>
               <Download className="h-3.5 w-3.5" /> Export CSV
+            </AdminButton>
+            <AdminButton variant="solid" size="sm" onClick={() => setHostCheckInOpen(true)}>
+              <QrCode className="h-3.5 w-3.5" /> Host Stand Check-In
             </AdminButton>
           </div>
         }
@@ -246,18 +234,15 @@ export function AdminReservations() {
                   onClick={() => toggleSort("date")}
                 />
                 <SortHeader
-                  label="Pax"
+                  label="Adults"
                   center
                   active={sortKey === "guests" && sortDir !== null}
                   dir={sortKey === "guests" ? sortDir : null}
                   onClick={() => toggleSort("guests")}
                 />
-                <SortHeader
-                  label="Status"
-                  active={sortKey === "status" && sortDir !== null}
-                  dir={sortKey === "status" ? sortDir : null}
-                  onClick={() => toggleSort("status")}
-                />
+                <th className="px-4 py-3.5 text-center font-sans text-[10px] font-semibold uppercase tracking-wider text-admin-muted">
+                  Kids
+                </th>
                 <th className="px-4 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
@@ -284,7 +269,7 @@ export function AdminReservations() {
                   <td colSpan={6} className="p-0">
                     <EmptyState
                       title="No reservations found"
-                      message="Try adjusting your search query or status filter to find what you're looking for."
+                      message="Try adjusting your search query to find what you're looking for."
                     />
                   </td>
                 </tr>
@@ -320,42 +305,33 @@ export function AdminReservations() {
                         {r.guests}
                       </span>
                     </td>
-                    <td className="px-4 py-4"><StatusBadge status={r.status} /></td>
+                    <td className="px-4 py-4 text-center">
+                      <span className={cn(
+                        "inline-flex h-7 min-w-[28px] items-center justify-center rounded-full border px-2 font-sans text-xs font-medium",
+                        r.kids && r.kids > 0
+                          ? "border-gold/40 bg-gold/10 text-gold font-semibold"
+                          : "border-admin-border bg-white/[0.02] text-admin-muted"
+                      )}>
+                        {r.kids || 0}
+                      </span>
+                    </td>
                     <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        {r.status === "PENDING" && (
-                          <IconAction
-                            title="Confirm"
-                            onClick={() => update(r.id, "CONFIRMED")}
-                            className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
-                          >
-                            <Check className="h-4 w-4" />
-                          </IconAction>
-                        )}
-                        {r.status === "CONFIRMED" && (
-                          <IconAction
-                            title="Mark completed"
-                            onClick={() => update(r.id, "COMPLETED")}
-                            className="border-sky-400/30 text-sky-300 hover:bg-sky-400/10"
-                          >
-                            <CheckCheck className="h-4 w-4" />
-                          </IconAction>
-                        )}
-                        {r.status !== "CANCELLED" && r.status !== "COMPLETED" && (
-                          <IconAction
-                            title="Cancel"
-                            onClick={() => update(r.id, "CANCELLED")}
-                            className="border-red-500/30 text-red-400 hover:bg-red-500/10"
-                          >
-                            <Ban className="h-4 w-4" />
-                          </IconAction>
-                        )}
                         <IconAction
                           title="View details"
                           onClick={() => setDetail(r)}
                           className="border-admin-gold/30 text-admin-gold hover:bg-admin-gold/10"
                         >
                           <Search className="h-4 w-4" />
+                        </IconAction>
+                        <IconAction
+                          title="Delete"
+                          onClick={() => {
+                            if (window.confirm(`Delete reservation for ${r.name}?`)) remove(r.id);
+                          }}
+                          className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </IconAction>
                       </div>
                     </td>
@@ -406,12 +382,6 @@ export function AdminReservations() {
                 </button>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <AdminButton variant="outline" size="sm" onClick={() => bulkUpdate("CONFIRMED")}>
-                  <Check className="h-3.5 w-3.5" /> Confirm all
-                </AdminButton>
-                <AdminButton variant="outline" size="sm" onClick={() => bulkUpdate("CANCELLED")}>
-                  <Ban className="h-3.5 w-3.5" /> Cancel all
-                </AdminButton>
                 <AdminButton
                   variant="danger"
                   size="sm"
@@ -440,15 +410,6 @@ export function AdminReservations() {
                 <Printer className="h-3.5 w-3.5" /> Print
               </AdminButton>
               <div className="ml-auto flex flex-wrap gap-2">
-                <AdminButton variant="outline" onClick={() => update(detail.id, "CANCELLED")}>
-                  <X className="h-3.5 w-3.5" /> Cancel
-                </AdminButton>
-                <AdminButton variant="outline" onClick={() => update(detail.id, "COMPLETED")}>
-                  <CheckCheck className="h-3.5 w-3.5" /> Complete
-                </AdminButton>
-                <AdminButton variant="solid" onClick={() => update(detail.id, "CONFIRMED")}>
-                  <Check className="h-3.5 w-3.5" /> Confirm
-                </AdminButton>
                 <AdminButton
                   variant="danger"
                   confirm="Delete this reservation permanently? This cannot be undone."
@@ -470,7 +431,8 @@ export function AdminReservations() {
               <DetailBox label="Email" value={detail.email || "—"} />
               <DetailBox label="Date" value={detail.date} />
               <DetailBox label="Time" value={detail.time} />
-              <DetailBox label="Guests" value={`${detail.guests} ${detail.guests === 1 ? "person" : "people"}`} />
+              <DetailBox label="Adult Guests" value={`${detail.guests} ${detail.guests === 1 ? "adult" : "adults"}`} />
+              <DetailBox label="Kids / Children" value={`${detail.kids || 0} ${detail.kids === 1 ? "child" : "children"}`} />
               <DetailBox label="Submitted" value={new Date(detail.createdAt).toLocaleString()} />
             </div>
 
@@ -491,6 +453,15 @@ export function AdminReservations() {
           </div>
         )}
       </Modal>
+
+      {/* Host Stand Check-In Modal */}
+      {hostCheckInOpen && (
+        <HostCheckInModal
+          list={safeList}
+          onClose={() => setHostCheckInOpen(false)}
+          onUpdateStatus={update}
+        />
+      )}
     </div>
   );
 }
@@ -577,5 +548,86 @@ function Checkbox({
         <Check className="h-3.5 w-3.5" strokeWidth={3} />
       ) : null}
     </button>
+  );
+}
+
+function HostCheckInModal({
+  list, onClose, onUpdateStatus,
+}: {
+  list: Reservation[];
+  onClose: () => void;
+  onUpdateStatus: (id: string, s: Reservation["status"]) => void;
+}) {
+  const [ticketInput, setTicketInput] = useState("");
+
+  const matched = useMemo(() => {
+    const q = ticketInput.trim().toUpperCase().replace("BO-RES-", "");
+    if (!q) return null;
+    return list.find((r) => r.id.toUpperCase().includes(q) || r.id.slice(-8).toUpperCase() === q || r.name.toUpperCase().includes(q));
+  }, [ticketInput, list]);
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Host Stand Check-In Scanner"
+      subtitle="Scan or enter guest ticket reference code (BO-RES-XXXXX)"
+      size="md"
+      footer={
+        <AdminButton variant="ghost" onClick={onClose}>Close</AdminButton>
+      }
+    >
+      <div className="space-y-5">
+        <AdminInput
+          label="Ticket Code or Guest Name"
+          icon={QrCode}
+          value={ticketInput}
+          onChange={(e) => setTicketInput(e.target.value)}
+          placeholder="e.g. BO-RES-12345678 or Guest Name"
+          autoFocus
+        />
+
+        {matched ? (
+          <div className="rounded-xl border border-admin-gold/40 bg-admin-gold/5 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-admin-gold">
+                BO-RES-{matched.id.slice(-8).toUpperCase()}
+              </span>
+              <StatusBadge status={matched.status} />
+            </div>
+            <div>
+              <h4 className="font-serif text-lg font-semibold text-white">{matched.name}</h4>
+              <p className="text-xs text-admin-muted">{matched.date} at {matched.time} · {matched.guests} Guests</p>
+              <p className="text-xs text-admin-muted font-mono">{matched.email} · {matched.phone}</p>
+            </div>
+            <div className="flex gap-2 pt-2 border-t border-admin-border/50">
+              <AdminButton
+                variant="solid"
+                size="sm"
+                className="flex-1"
+                onClick={() => { onUpdateStatus(matched.id, "CONFIRMED"); toast.success(`Guest ${matched.name} checked in!`); }}
+              >
+                <Check className="h-3.5 w-3.5" /> Check In & Seat Guest
+              </AdminButton>
+              <AdminButton
+                variant="outline"
+                size="sm"
+                onClick={() => { onUpdateStatus(matched.id, "COMPLETED"); toast.success(`Reservation for ${matched.name} completed!`); }}
+              >
+                Mark Completed
+              </AdminButton>
+            </div>
+          </div>
+        ) : ticketInput.trim() ? (
+          <div className="rounded-xl border border-admin-border bg-admin-card/50 p-4 text-center text-xs text-admin-muted">
+            No matching reservation found for "{ticketInput}"
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-admin-border p-6 text-center text-xs text-admin-muted">
+            Ready to scan. Point host camera scanner at guest pass or type ticket code above.
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }

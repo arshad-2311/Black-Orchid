@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, ChevronLeft, ChevronRight, ZoomIn, Maximize2, Star, Flame, Leaf, Award,
-  Check, AlertTriangle, Plus, Minus,
+  Check, AlertTriangle, Plus, Minus, Wine,
 } from "lucide-react";
 import type { MenuItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -49,13 +49,16 @@ export function DishShowcase({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.3 }}
+        role="dialog"
+        aria-modal="true"
+        aria-label={dish.name}
         className="fixed inset-0 z-[90] flex items-stretch justify-center bg-black/85 backdrop-blur-md"
         onClick={onClose}
       >
         {/* Close + nav controls (outside the panel so they don't clip) */}
         <button
           onClick={onClose}
-          className="fixed right-4 top-4 z-[95] flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white backdrop-blur-md transition-all hover:border-gold/60 hover:text-gold sm:right-6 sm:top-6"
+          className="fixed right-4 top-[calc(1rem+env(safe-area-inset-top,0px))] z-[95] flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white backdrop-blur-md transition-all hover:border-gold/60 hover:text-gold sm:right-6 sm:top-6"
           aria-label="Close"
         >
           <X className="h-5 w-5" />
@@ -78,10 +81,10 @@ export function DishShowcase({
         {/* The panel — scales in */}
         <motion.div
           key={dish.id}
-          initial={{ opacity: 0, scale: 0.96, y: 16 }}
+          initial={{ opacity: 0, scale: 0.97, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.97, y: 8 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          exit={{ opacity: 0, scale: 0.98, y: 6 }}
+          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           onClick={(e) => e.stopPropagation()}
           className="relative my-0 h-full w-full overflow-y-auto bg-[#0a0a0a] sm:my-4 sm:h-auto sm:max-h-[94vh] sm:rounded-3xl lg:my-8 lg:max-h-[90vh] lg:border lg:border-white/[0.08]"
         >
@@ -364,11 +367,65 @@ function DishDetails({
           </motion.div>
         )}
 
+        {/* Sommelier Wine Pairing Card */}
+        {dish.winePairing && (
+          <motion.div variants={item} className="mt-7 overflow-hidden rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/10 via-background/80 to-background p-5 backdrop-blur-md shadow-xl shadow-gold/5">
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex items-center gap-2 font-sans text-[10px] font-semibold uppercase tracking-[0.25em] text-gold">
+                <Wine className="h-4 w-4" /> Sommelier Selection
+              </span>
+              {dish.pairingPrice && (
+                <span className="rounded-full border border-gold/40 bg-gold/15 px-3 py-1 font-sans text-xs font-semibold text-gold">
+                  +₹{dish.pairingPrice} / glass
+                </span>
+              )}
+            </div>
+            <h4 className="mt-3 font-[family-name:var(--font-playfair)] text-xl font-semibold text-foreground">
+              {dish.winePairing}
+            </h4>
+            {dish.tastingNotes && (
+              <p className="mt-2 font-[family-name:var(--font-cormorant)] text-base italic leading-relaxed text-foreground/80">
+                "{dish.tastingNotes}"
+              </p>
+            )}
+          </motion.div>
+        )}
+
+        {/* Dish Variants Selector if variants exist */}
+        {dish.variants && dish.variants.length > 0 && (
+          <motion.div variants={item} className="mt-8">
+            <h3 className="font-sans text-[10px] uppercase tracking-[0.25em] text-gold/80">Options / Portion</h3>
+            <div className="mt-3 flex flex-wrap gap-2.5">
+              {dish.variants.map((v, idx) => (
+                <div key={idx} className="flex items-center gap-2 rounded-xl border border-gold/40 bg-gold/10 px-4 py-2 font-sans text-xs text-foreground">
+                  <span className="font-medium text-gold">{v.name}</span>
+                  <span className="text-white/60">·</span>
+                  <span className="font-semibold text-gold-gradient">₹{v.price}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {/* Price + reserve (desktop) */}
         <motion.div variants={item} className="mt-9 flex flex-wrap items-center justify-between gap-4 border-t border-white/[0.06] pt-7">
           <div>
             <span className="font-sans text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Price</span>
-            <p className="font-[family-name:var(--font-playfair)] text-4xl font-semibold text-gold-gradient">${dish.price}</p>
+            <p className="font-[family-name:var(--font-playfair)] text-4xl font-semibold text-gold-gradient">
+              {dish.variants && dish.variants.length > 0 ? (
+                (() => {
+                  const prices = dish.variants.map((v) => v.price).filter((p) => typeof p === "number" && p > 0);
+                  if (prices.length === 0) return dish.price ? `₹${dish.price}` : "";
+                  const min = Math.min(...prices);
+                  const max = Math.max(...prices);
+                  return min === max ? `₹${min}` : `₹${min} – ₹${max}`;
+                })()
+              ) : dish.price !== null && dish.price !== undefined ? (
+                `₹${dish.price}`
+              ) : (
+                ""
+              )}
+            </p>
           </div>
           {onReserve && dish.available && (
             <LuxuryButton onClick={onReserve} className="min-h-[48px]">Reserve to Taste</LuxuryButton>
@@ -404,6 +461,16 @@ function DishDetails({
 }
 
 function RelatedCard({ dish, onClick }: { dish: MenuItem; onClick: () => void }) {
+  const displayPrice = dish.variants && dish.variants.length > 0
+    ? (() => {
+        const prices = dish.variants.map((v) => v.price).filter((p) => typeof p === "number" && p > 0);
+        if (prices.length === 0) return dish.price ? `₹${dish.price}` : "";
+        const min = Math.min(...prices);
+        const max = Math.max(...prices);
+        return min === max ? `₹${min}` : `₹${min} – ₹${max}`;
+      })()
+    : dish.price !== null && dish.price !== undefined ? `₹${dish.price}` : "";
+
   return (
     <button onClick={onClick} className="group overflow-hidden rounded-xl border border-white/[0.06] bg-card text-left transition-all hover:-translate-y-1 hover:border-gold/30">
       <div className="relative aspect-square overflow-hidden">
@@ -411,7 +478,7 @@ function RelatedCard({ dish, onClick }: { dish: MenuItem; onClick: () => void })
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-3">
           <p className="font-[family-name:var(--font-playfair)] text-sm font-semibold text-foreground leading-tight">{dish.name}</p>
-          <p className="mt-0.5 font-sans text-xs text-gold">${dish.price}</p>
+          <p className="mt-0.5 font-sans text-xs text-gold">{displayPrice}</p>
         </div>
       </div>
     </button>

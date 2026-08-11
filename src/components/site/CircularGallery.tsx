@@ -1,15 +1,15 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * CircularGallery — a premium infinite horizontal image carousel.
- * Smooth drag + wheel interaction, large HD images, minimal labels.
- * Lazy loads images, respects reduced-motion (renders as a simple horizontal scroll).
- *
- * Accessibility: keyboard navigable (arrow keys), ARIA roles for carousel.
+ * CircularGallery — A Rebuilt 60fps Single-Authoritative-System Horizontal Gallery.
+ * Position Owner: Native Horizontal Overflow Track (scroll-snap-type: x mandatory).
+ * Drag Engine: HTML5 Pointer Captures (PointerEvents) with rAF DOM scrollLeft updates.
+ * Lenis Isolation: data-lenis-prevent attribute.
+ * Touch & Keyboard: Native pan-x touch momentum & non-queueing smooth scroll targets.
  */
 export function CircularGallery({
   images,
@@ -20,137 +20,165 @@ export function CircularGallery({
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [activeIdx, setActiveIdx] = useState(0);
-  const [reducedMotion, setReducedMotion] = useState(() =>
-    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
-  const [dragging, setDragging] = useState(false);
-  const dragStartX = useRef(0);
-  const dragStartScroll = useRef(0);
+  const [isPointerDragging, setIsPointerDragging] = useState(false);
 
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const onChange = () => setReducedMotion(mq.matches);
-    mq.addEventListener?.("change", onChange);
-    return () => mq.removeEventListener?.("change", onChange);
-  }, []);
+  // Drag refs (zero React re-renders during pointer moves)
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const startScrollLeft = useRef(0);
+  const dragRafId = useRef<number | null>(null);
 
-  // Detect the centered image on scroll
+  // Throttled center slide calculation
+  const scrollRafId = useRef<number | null>(null);
   const onScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    // Each "slot" is el.clientWidth / 2 (center-based snapping)
-    const slot = el.clientWidth * 0.5;
-    const idx = Math.round(el.scrollLeft / slot);
-    const clamped = ((idx % images.length) + images.length) % images.length;
-    setActiveIdx(clamped);
+    if (scrollRafId.current !== null) return;
+    scrollRafId.current = requestAnimationFrame(() => {
+      scrollRafId.current = null;
+      const el = scrollRef.current;
+      if (!el || images.length === 0) return;
+
+      const containerCenter = el.scrollLeft + el.clientWidth / 2;
+      const children = Array.from(el.children) as HTMLElement[];
+      let closestIdx = 0;
+      let minDistance = Infinity;
+
+      children.forEach((child, idx) => {
+        const childCenter = child.offsetLeft + child.offsetWidth / 2;
+        const distance = Math.abs(containerCenter - childCenter);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestIdx = idx;
+        }
+      });
+
+      const realIdx = ((closestIdx % images.length) + images.length) % images.length;
+      setActiveIdx((prev) => (prev !== realIdx ? realIdx : prev));
+    });
   }, [images.length]);
 
-  const scrollEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleScroll = useCallback(() => {
-    if (scrollEndTimer.current) clearTimeout(scrollEndTimer.current);
-    scrollEndTimer.current = setTimeout(() => {
-      const el = scrollRef.current;
-      if (!el) return;
-      const slot = el.clientWidth * 0.5;
-      const idx = Math.round(el.scrollLeft / slot);
-      if (!reducedMotion) {
-        el.scrollTo({ left: idx * slot, behavior: "smooth" });
-      } else {
-        el.scrollLeft = idx * slot;
+  // Pointer Events (Unified Mouse, Touch, Stylus Drag with Pointer Capture)
+  const onPointerDown = (e: React.PointerEvent) => {
+    // Only capture primary mouse click or touch
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    const el = scrollRef.current;
+    if (!el) return;
+
+    isDragging.current = true;
+    startX.current = e.clientX;
+    startScrollLeft.current = el.scrollLeft;
+    setIsPointerDragging(true);
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Fallback if pointer capture fails
+    }
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!isDragging.current || !scrollRef.current) return;
+    const currentX = e.clientX;
+    const delta = currentX - startX.current;
+
+    if (dragRafId.current !== null) return;
+    dragRafId.current = requestAnimationFrame(() => {
+      dragRafId.current = null;
+      if (scrollRef.current) {
+        scrollRef.current.scrollLeft = startScrollLeft.current - delta;
       }
-      onScroll();
-    }, 120);
-  }, [onScroll, reducedMotion]);
-
-  // Touch/mouse drag
-  const onMouseDown = (e: React.MouseEvent) => {
-    setDragging(true);
-    dragStartX.current = e.clientX;
-    dragStartScroll.current = scrollRef.current?.scrollLeft || 0;
-  };
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!dragging) return;
-    const delta = e.clientX - dragStartX.current;
-    if (scrollRef.current) {
-      scrollRef.current.scrollLeft = dragStartScroll.current - delta;
-    }
-  };
-  const onMouseUp = () => {
-    setDragging(false);
-    handleScroll();
+    });
   };
 
-  // Touch drag
-  const onTouchStart = (e: React.TouchEvent) => {
-    dragStartX.current = e.touches[0].clientX;
-    dragStartScroll.current = scrollRef.current?.scrollLeft || 0;
-  };
-  const onTouchMove = (e: React.TouchEvent) => {
-    const delta = e.touches[0].clientX - dragStartX.current;
-    if (scrollRef.current) {
-      scrollRef.current.scrollLeft = dragStartScroll.current - delta;
+  const stopDragging = (e: React.PointerEvent) => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    setIsPointerDragging(false);
+
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    } catch {
+      // Ignore release errors
     }
   };
-  const onTouchEnd = () => handleScroll();
+
+  // Smooth Navigation Helper (Non-queueing scroll targets)
+  const navigateToCard = useCallback((targetIndex: number) => {
+    const el = scrollRef.current;
+    if (!el || images.length === 0) return;
+    const children = Array.from(el.children) as HTMLElement[];
+    const targetChild = children[targetIndex];
+    if (targetChild) {
+      const targetLeft = targetChild.offsetLeft - (el.clientWidth - targetChild.offsetWidth) / 2;
+      el.scrollTo({ left: targetLeft, behavior: "smooth" });
+    }
+  }, [images.length]);
 
   // Keyboard navigation
   const onKeyDown = (e: React.KeyboardEvent) => {
     const el = scrollRef.current;
     if (!el) return;
-    const slot = el.clientWidth * 0.5;
+    const child = el.firstElementChild as HTMLElement | null;
+    const cardStep = child ? child.offsetWidth + 24 : 360;
+
     if (e.key === "ArrowRight") {
       e.preventDefault();
-      el.scrollTo({ left: el.scrollLeft + slot, behavior: "smooth" });
+      el.scrollBy({ left: cardStep, behavior: "smooth" });
     } else if (e.key === "ArrowLeft") {
       e.preventDefault();
-      el.scrollTo({ left: el.scrollLeft - slot, behavior: "smooth" });
+      el.scrollBy({ left: -cardStep, behavior: "smooth" });
     }
   };
 
-  // Build the carousel items — duplicate for infinite effect
+  // 3x dataset duplication for infinite loop feel
   const items = [...images, ...images, ...images];
 
   return (
     <div
-      className={cn("relative w-full overflow-hidden", className)}
+      className={cn("relative w-full overflow-hidden select-none", className)}
       role="region"
-      aria-label="Gallery carousel"
+      aria-label="Cinematic gallery carousel"
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
+      {/* Scroll Container with Lenis isolation */}
       <div
         ref={scrollRef}
-        onScroll={handleScroll}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onWheel={(e) => {
-          // Horizontal wheel support for trackpads
-          if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-            // let native scroll handle it
-          }
+        onScroll={onScroll}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={stopDragging}
+        onPointerCancel={stopDragging}
+        data-lenis-prevent="true"
+        data-lenis-prevent-wheel="true"
+        data-lenis-prevent-touch="true"
+        className={cn(
+          "no-scrollbar flex gap-4 sm:gap-6 overflow-x-auto px-[10%] sm:px-[15%] lg:px-[20%] py-8 touch-pan-x cursor-grab active:cursor-grabbing",
+          isPointerDragging && "cursor-grabbing"
+        )}
+        style={{
+          scrollSnapType: "x mandatory",
+          WebkitOverflowScrolling: "touch",
         }}
-        className="no-scrollbar flex cursor-grab gap-4 overflow-x-auto px-[10%] py-8 active:cursor-grabbing sm:gap-6 sm:px-[15%] lg:px-[20%]"
-        data-cursor="drag"
-        style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch" }}
       >
         {items.map((img, i) => {
           const realIdx = ((i % images.length) + images.length) % images.length;
           const isActive = realIdx === activeIdx;
+
           return (
             <div
               key={i}
-              className="relative shrink-0 overflow-hidden rounded-[1.5rem] border border-white/[0.06] transition-all duration-500"
+              className={cn(
+                "relative shrink-0 overflow-hidden rounded-[1.5rem] border border-white/[0.08] transition-all duration-500 ease-out",
+                isActive
+                  ? "scale-100 opacity-100 shadow-[0_20px_50px_rgba(0,0,0,0.6)] border-gold/40"
+                  : "scale-90 opacity-45 hover:opacity-70"
+              )}
               style={{
                 scrollSnapAlign: "center",
                 width: "min(80vw, 520px)",
                 height: "min(60vh, 420px)",
-                transform: isActive ? "scale(1)" : "scale(0.85)",
-                opacity: isActive ? 1 : 0.5,
               }}
               role="group"
               aria-roledescription="slide"
@@ -159,13 +187,14 @@ export function CircularGallery({
               <img
                 src={img.url}
                 alt={img.title}
-                loading="lazy"
+                loading="eager"
                 decoding="async"
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover pointer-events-none"
+                draggable={false}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-6">
-                <p className="font-[family-name:var(--font-playfair)] text-2xl font-semibold text-foreground">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
+              <div className="absolute bottom-0 left-0 right-0 p-6 pointer-events-none">
+                <p className="font-[family-name:var(--font-playfair)] text-2xl font-semibold text-foreground drop-shadow-md">
                   {img.title}
                 </p>
                 {img.label && (
@@ -179,20 +208,45 @@ export function CircularGallery({
         })}
       </div>
 
-      {/* Dots indicator */}
-      <div className="mt-2 flex justify-center gap-1.5">
+      {/* Desktop Floating Arrow Controls */}
+      <div className="pointer-events-none absolute inset-y-0 left-4 right-4 hidden items-center justify-between sm:flex z-10">
+        <button
+          onClick={() => {
+            const el = scrollRef.current;
+            if (!el) return;
+            const child = el.firstElementChild as HTMLElement | null;
+            const step = child ? child.offsetWidth + 24 : 360;
+            el.scrollBy({ left: -step, behavior: "smooth" });
+          }}
+          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white backdrop-blur-md transition-all hover:border-gold/60 hover:text-gold active:scale-95"
+          aria-label="Previous gallery image"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <button
+          onClick={() => {
+            const el = scrollRef.current;
+            if (!el) return;
+            const child = el.firstElementChild as HTMLElement | null;
+            const step = child ? child.offsetWidth + 24 : 360;
+            el.scrollBy({ left: step, behavior: "smooth" });
+          }}
+          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white backdrop-blur-md transition-all hover:border-gold/60 hover:text-gold active:scale-95"
+          aria-label="Next gallery image"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Pagination Dots */}
+      <div className="mt-2 flex justify-center gap-2">
         {images.map((_, i) => (
           <button
             key={i}
-            onClick={() => {
-              const el = scrollRef.current;
-              if (!el) return;
-              const slot = el.clientWidth * 0.5;
-              el.scrollTo({ left: (i + images.length) * slot, behavior: "smooth" });
-            }}
+            onClick={() => navigateToCard(i + images.length)}
             className={cn(
               "h-1.5 rounded-full transition-all duration-300",
-              i === activeIdx ? "w-8 bg-gold" : "w-1.5 bg-white/20 hover:bg-white/40"
+              i === activeIdx ? "w-8 bg-gold" : "w-1.5 bg-white/20 hover:bg-white/50"
             )}
             aria-label={`Go to slide ${i + 1}`}
           />
