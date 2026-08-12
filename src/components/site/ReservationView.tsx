@@ -705,6 +705,8 @@ function SuccessScreen({
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const params = new URLSearchParams({
       n: reservation.name,
+      p: reservation.phone || "",
+      e: reservation.email || "",
       d: reservation.date,
       t: reservation.time,
       g: String(reservation.guests),

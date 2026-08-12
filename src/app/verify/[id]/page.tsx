@@ -24,7 +24,7 @@ export default async function VerifyPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ n?: string; d?: string; t?: string; g?: string; k?: string }>;
+  searchParams?: Promise<{ n?: string; p?: string; e?: string; d?: string; t?: string; g?: string; k?: string }>;
 }) {
   await ensureSeeded();
   const { id } = await params;
@@ -54,8 +54,8 @@ export default async function VerifyPage({
   const reservation = dbReservation || {
     id: id,
     name: query.n || "Valued Guest",
-    email: "",
-    phone: "",
+    phone: query.p || "Not Provided",
+    email: query.e || "Not Provided",
     date: query.d || new Date().toISOString().slice(0, 10),
     time: query.t || "7:00 PM",
     guests: Number(query.g) || 2,
@@ -67,6 +67,10 @@ export default async function VerifyPage({
 
   const ticketRef = `BO-RES-${reservation.id.slice(-8).toUpperCase()}`;
   const isConfirmed = reservation.status === "CONFIRMED" || reservation.status === "COMPLETED";
+
+  const kidsCount = Number(reservation.kids || 0);
+  const adultsCount = Number(reservation.guests || 1);
+  const partyBreakdown = `${adultsCount} ${adultsCount === 1 ? "Adult" : "Adults"}${kidsCount > 0 ? `, ${kidsCount} ${kidsCount === 1 ? "Kid" : "Kids"}` : ""}`;
 
   return (
     <div className="min-h-screen w-full bg-[#0A0A0C] text-foreground flex flex-col items-center justify-center p-4 sm:p-6 cinematic-grain">
@@ -140,7 +144,7 @@ export default async function VerifyPage({
                 <Users className="h-3.5 w-3.5" /> Party Size
               </span>
               <p className="mt-1 font-[family-name:var(--font-playfair)] text-2xl font-bold text-gold">
-                {reservation.guests} Guests Reserved
+                {partyBreakdown}
               </p>
             </div>
           </div>
