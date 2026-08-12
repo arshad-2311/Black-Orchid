@@ -24,11 +24,17 @@ export default async function VerifyPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ n?: string; p?: string; e?: string; d?: string; t?: string; g?: string; k?: string }>;
+  searchParams?: Promise<{ data?: string; n?: string; p?: string; e?: string; d?: string; t?: string; g?: string; k?: string }>;
 }) {
   await ensureSeeded();
   const { id } = await params;
   const query = (await searchParams) || {};
+  let tokenData: any = null;
+  if (query.data) {
+    try {
+      tokenData = JSON.parse(decodeURIComponent(atob(query.data)));
+    } catch {}
+  }
 
   // Search by exact ID or tail reference in database
   let dbReservation = await db.reservation.findFirst({
@@ -50,16 +56,16 @@ export default async function VerifyPage({
     }
   }
 
-  // Use database reservation if found, otherwise construct verified guest pass from QR parameters
+  // Use database reservation if found, otherwise construct verified guest pass from QR token/parameters
   const reservation = dbReservation || {
     id: id,
-    name: query.n || "Valued Guest",
-    phone: query.p || "Not Provided",
-    email: query.e || "Not Provided",
-    date: query.d || new Date().toISOString().slice(0, 10),
-    time: query.t || "7:00 PM",
-    guests: Number(query.g) || 2,
-    kids: Number(query.k) || 0,
+    name: tokenData?.n || query.n || "Valued Guest",
+    phone: tokenData?.p || query.p || "Not Provided",
+    email: tokenData?.e || query.e || "Not Provided",
+    date: tokenData?.d || query.d || new Date().toISOString().slice(0, 10),
+    time: tokenData?.t || query.t || "7:00 PM",
+    guests: tokenData?.g !== undefined ? Number(tokenData.g) : (Number(query.g) || 2),
+    kids: tokenData?.k !== undefined ? Number(tokenData.k) : (Number(query.k) || 0),
     special: "",
     status: "CONFIRMED",
     createdAt: new Date(),

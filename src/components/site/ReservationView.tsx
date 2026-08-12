@@ -703,7 +703,23 @@ function SuccessScreen({
 
   useEffect(() => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const passData = {
+      id: reservation.id,
+      n: reservation.name,
+      p: reservation.phone || "",
+      e: reservation.email || "",
+      d: reservation.date,
+      t: reservation.time,
+      g: Number(reservation.guests),
+      k: Number(reservation.kids || 0),
+    };
+    let tokenStr = "";
+    try {
+      tokenStr = btoa(encodeURIComponent(JSON.stringify(passData)));
+    } catch {}
+
     const params = new URLSearchParams({
+      data: tokenStr,
       n: reservation.name,
       p: reservation.phone || "",
       e: reservation.email || "",
