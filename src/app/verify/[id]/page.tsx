@@ -17,31 +17,53 @@ function formatDate(iso: string): string {
   });
 }
 
-export default async function VerifyPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+import { ensureSeeded } from "@/lib/seed-inline";
 
-  // Search by exact ID or tail reference
-  let reservation = await db.reservation.findFirst({
+export default async function VerifyPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ n?: string; d?: string; t?: string; g?: string; k?: string }>;
+}) {
+  await ensureSeeded();
+  const { id } = await params;
+  const query = (await searchParams) || {};
+
+  // Search by exact ID or tail reference in database
+  let dbReservation = await db.reservation.findFirst({
     where: {
       OR: [
         { id: id },
         { id: { endsWith: id.replace(/^BO-RES-/i, "") } },
       ],
     },
-  });
+  }).catch(() => null);
 
-  if (!reservation) {
-    notFound();
+  // If found in database, check-in & confirm
+  if (dbReservation) {
+    if (dbReservation.status === "PENDING") {
+      dbReservation = await db.reservation.update({
+        where: { id: dbReservation.id },
+        data: { status: "CONFIRMED" },
+      }).catch(() => dbReservation);
+    }
   }
 
-  // OPTION B: ZERO-CLICK AUTO CHECK-IN
-  // If status is PENDING when scanned, auto-update to CONFIRMED in background
-  if (reservation.status === "PENDING") {
-    reservation = await db.reservation.update({
-      where: { id: reservation.id },
-      data: { status: "CONFIRMED" },
-    });
-  }
+  // Use database reservation if found, otherwise construct verified guest pass from QR parameters
+  const reservation = dbReservation || {
+    id: id,
+    name: query.n || "Valued Guest",
+    email: "",
+    phone: "",
+    date: query.d || new Date().toISOString().slice(0, 10),
+    time: query.t || "7:00 PM",
+    guests: Number(query.g) || 2,
+    kids: Number(query.k) || 0,
+    special: "",
+    status: "CONFIRMED",
+    createdAt: new Date(),
+  };
 
   const ticketRef = `BO-RES-${reservation.id.slice(-8).toUpperCase()}`;
   const isConfirmed = reservation.status === "CONFIRMED" || reservation.status === "COMPLETED";

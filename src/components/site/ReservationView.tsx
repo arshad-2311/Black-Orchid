@@ -703,11 +703,18 @@ function SuccessScreen({
 
   useEffect(() => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const verifyUrl = `${origin}/verify/${reservation.id}`;
+    const params = new URLSearchParams({
+      n: reservation.name,
+      d: reservation.date,
+      t: reservation.time,
+      g: String(reservation.guests),
+      k: String(reservation.kids || 0),
+    }).toString();
+    const verifyUrl = `${origin}/verify/${reservation.id}?${params}`;
     QRCode.toString(verifyUrl, { type: "svg", margin: 1, color: { dark: "#D4AF37", light: "#0A0A0C" } })
       .then(setQrSvg)
       .catch(() => { });
-  }, [reservation.id]);
+  }, [reservation]);
 
   const handlePrint = () => {
     if (typeof window !== "undefined") window.print();
