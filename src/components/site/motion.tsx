@@ -82,7 +82,7 @@ export function RevealText({
   );
 }
 
-/* Parallax wrapper — moves child Y based on scroll */
+/* Parallax wrapper — moves child Y based on scroll (bypassed on coarse touch devices) */
 export function Parallax({
   children, className, speed = 0.3,
 }: {
@@ -91,6 +91,12 @@ export function Parallax({
   const ref = useRef<HTMLDivElement | null>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
   const y = useTransform(scrollYProgress, [0, 1], [speed * 100, -speed * 100]);
+  const isCoarse = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+
+  if (isCoarse) {
+    return <div className={className}>{children}</div>;
+  }
+
   return (
     <div ref={ref} className={className}>
       <motion.div style={{ y }}>{children}</motion.div>
@@ -98,23 +104,26 @@ export function Parallax({
   );
 }
 
-/* Image reveal with clip-path mask + subtle scale, on scroll into view */
+/* Image reveal — uses GPU opacity on mobile touch devices to eliminate clip-path paint thrashing */
 export function ImageReveal({
-  src, alt, className, imgClassName, rounded = "rounded-2xl",
+  src, alt, className, imgClassName, rounded = "rounded-2xl", priority = false,
 }: {
-  src: string; alt: string; className?: string; imgClassName?: string; rounded?: string;
+  src: string; alt: string; className?: string; imgClassName?: string; rounded?: string; priority?: boolean;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const inView = useInView(ref, { once: true, margin: "-50px" });
+  const inView = useInView(ref, { once: true, margin: "-30px" });
+  const isCoarse = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+
   return (
     <div ref={ref} className={cn("relative overflow-hidden", rounded, className)}>
       <motion.img
         src={src}
         alt={alt}
-        loading="lazy"
-        initial={{ clipPath: "inset(0 0 100% 0)", scale: 1.25 }}
-        animate={inView ? { clipPath: "inset(0 0 0 0)", scale: 1.05 } : {}}
-        transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+        initial={isCoarse ? { opacity: 0 } : { clipPath: "inset(0 0 100% 0)", scale: 1.15 }}
+        animate={inView ? (isCoarse ? { opacity: 1 } : { clipPath: "inset(0 0 0 0)", scale: 1 }) : {}}
+        transition={{ duration: isCoarse ? 0.4 : 0.9, ease: [0.22, 1, 0.36, 1] }}
         className={cn("h-full w-full object-cover", imgClassName)}
       />
     </div>
