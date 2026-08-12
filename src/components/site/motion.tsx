@@ -51,12 +51,12 @@ export function RevealItem({ children, className, y = 24 }: { children: ReactNod
 
 /* Word-by-word text reveal with mask, triggered on scroll into view */
 export function RevealText({
-  text, className, as: Tag = "p", stagger = 0.06, delay = 0,
+  text, className, as: Tag = "p", stagger = 0.03, delay = 0,
 }: {
   text: string; className?: string; as?: "p" | "h1" | "h2" | "h3" | "span"; stagger?: number; delay?: number;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
+  const inView = useInView(ref, { once: true, margin: "-20px" });
   const words = text.split(" ");
   const MotionTag = motion[Tag];
   return (
@@ -72,7 +72,7 @@ export function RevealText({
         <span key={i} className="reveal-mask" aria-hidden>
           <motion.span
             className="inline-block"
-            variants={{ hidden: { y: "110%" }, show: { y: 0, transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] as const } } }}
+            variants={{ hidden: { y: "110%" }, show: { y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const } } }}
           >
             {w}&nbsp;
           </motion.span>

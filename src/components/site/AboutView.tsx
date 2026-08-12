@@ -40,9 +40,9 @@ export function AboutView({ settings }: { settings: SiteSettings | null }) {
             <Eyebrow className="mb-6 justify-center">Our Story</Eyebrow>
           </motion.div>
           <h1 className="font-[family-name:var(--font-playfair)] text-6xl font-semibold leading-[1.02] tracking-luxe text-foreground drop-shadow-[0_4px_30px_rgba(10,10,10,0.6)] sm:text-7xl lg:text-8xl">
-            <RevealText text="About" as="span" delay={0.2} className="inline-block" />
-            <RevealText text="Black" as="span" delay={0.42} className="ml-3 inline-block sm:ml-5" />
-            <RevealText text="Orchid" as="span" delay={0.62} className="ml-3 inline-block text-gold-gradient sm:ml-5" />
+            <RevealText text="About" as="span" delay={0.05} className="inline-block" />
+            <RevealText text="Black" as="span" delay={0.10} className="ml-3 inline-block sm:ml-5" />
+            <RevealText text="Orchid" as="span" delay={0.15} className="ml-3 inline-block text-gold-gradient sm:ml-5" />
           </h1>
           <OrnamentDivider className="mt-8" />
           <motion.p

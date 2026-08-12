@@ -22,7 +22,7 @@ export function LegalView({ kind }: { kind: "privacy" | "terms" }) {
             <Eyebrow className="mb-6 justify-center">Legal</Eyebrow>
           </motion.div>
           <h1 className="font-[family-name:var(--font-playfair)] text-5xl font-semibold leading-[1.04] tracking-luxe text-foreground sm:text-7xl lg:text-8xl">
-            <RevealText text={title} as="span" delay={0.2} className="inline-block text-gold-gradient" />
+            <RevealText text={title} as="span" delay={0.05} className="inline-block text-gold-gradient" />
           </h1>
           <OrnamentDivider className="mt-8" />
           <motion.p

@@ -59,9 +59,9 @@ export function BanquetView({ settings }: { settings: SiteSettings | null }) {
             <Eyebrow className="mb-6 justify-center">Banquet Facility & Special Events</Eyebrow>
           </motion.div>
           <h1 className="font-[family-name:var(--font-playfair)] text-6xl font-semibold leading-[1.02] tracking-luxe text-foreground drop-shadow-[0_4px_30px_rgba(10,10,10,0.6)] sm:text-7xl lg:text-8xl">
-            <RevealText text="Celebrations" as="span" delay={0.2} className="inline-block" />
-            <RevealText text="of" as="span" delay={0.4} className="ml-3 inline-block sm:ml-5" />
-            <RevealText text="Distinction" as="span" delay={0.6} className="ml-3 inline-block text-gold-gradient sm:ml-5" />
+            <RevealText text="Celebrations" as="span" delay={0.05} className="inline-block" />
+            <RevealText text="of" as="span" delay={0.10} className="ml-3 inline-block sm:ml-5" />
+            <RevealText text="Distinction" as="span" delay={0.15} className="ml-3 inline-block text-gold-gradient sm:ml-5" />
           </h1>
           <OrnamentDivider className="mt-8" />
           <motion.p
