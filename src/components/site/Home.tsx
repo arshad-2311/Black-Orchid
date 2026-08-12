@@ -23,9 +23,9 @@ export function Home({ settings }: { settings: SiteSettings | null }) {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
 
   useEffect(() => {
-    apiGet<MenuCategory[]>("/api/menu").then(setCategories).catch(() => {});
-    apiGet<GalleryImage[]>("/api/gallery").then(setGallery).catch(() => {});
-    apiGet<Testimonial[]>("/api/testimonials?featured=1").then(setTestimonials).catch(() => {});
+    apiGet<MenuCategory[]>("/api/menu").then(setCategories).catch(() => { });
+    apiGet<GalleryImage[]>("/api/gallery").then(setGallery).catch(() => { });
+    apiGet<Testimonial[]>("/api/testimonials?featured=1").then(setTestimonials).catch(() => { });
   }, []);
 
   const featuredItems = useMemo(

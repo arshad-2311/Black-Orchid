@@ -143,7 +143,7 @@ export function CountUp({ to, className, suffix = "" }: { to: number; className?
     <motion.span
       ref={ref}
       className={className}
-      onAnimationStart={() => {}}
+      onAnimationStart={() => { }}
     >
       <motion.span
         onViewportEnter={() => count.set(to)}

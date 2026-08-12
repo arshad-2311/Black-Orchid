@@ -5,11 +5,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * CircularGallery — A Rebuilt 60fps Single-Authoritative-System Horizontal Gallery.
- * Position Owner: Native Horizontal Overflow Track (scroll-snap-type: x mandatory).
- * Drag Engine: HTML5 Pointer Captures (PointerEvents) with rAF DOM scrollLeft updates.
- * Lenis Isolation: data-lenis-prevent attribute.
- * Touch & Keyboard: Native pan-x touch momentum & non-queueing smooth scroll targets.
+ * CircularGallery — High-performance horizontal gallery.
+ * Optimizations:
+ * - O(1) slide distance calculation without synchronous layout-thrashing DOM queries
+ * - Targeted transition-[transform,opacity] (no box-shadow raster repaints across 48 cards)
+ * - Native touch pan preservation on coarse pointer devices (no touch pointer-capture conflicts)
+ * - Intelligent lazy loading for off-screen slides
  */
 export function CircularGallery({
   images,
@@ -27,9 +28,9 @@ export function CircularGallery({
   const startX = useRef(0);
   const startScrollLeft = useRef(0);
   const dragRafId = useRef<number | null>(null);
-
-  // Throttled center slide calculation
   const scrollRafId = useRef<number | null>(null);
+
+  // O(1) centered slide calculation without DOM layout thrashing
   const onScroll = useCallback(() => {
     if (scrollRafId.current !== null) return;
     scrollRafId.current = requestAnimationFrame(() => {
@@ -37,29 +38,19 @@ export function CircularGallery({
       const el = scrollRef.current;
       if (!el || images.length === 0) return;
 
-      const containerCenter = el.scrollLeft + el.clientWidth / 2;
-      const children = Array.from(el.children) as HTMLElement[];
-      let closestIdx = 0;
-      let minDistance = Infinity;
+      const firstChild = el.firstElementChild as HTMLElement | null;
+      const cardWidth = firstChild ? firstChild.offsetWidth + 16 : 360;
+      const scrollOffset = el.scrollLeft + el.clientWidth / 2 - cardWidth / 2 - el.clientWidth * 0.1;
+      const rawIdx = Math.round(scrollOffset / cardWidth);
+      const realIdx = ((rawIdx % images.length) + images.length) % images.length;
 
-      children.forEach((child, idx) => {
-        const childCenter = child.offsetLeft + child.offsetWidth / 2;
-        const distance = Math.abs(containerCenter - childCenter);
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestIdx = idx;
-        }
-      });
-
-      const realIdx = ((closestIdx % images.length) + images.length) % images.length;
       setActiveIdx((prev) => (prev !== realIdx ? realIdx : prev));
     });
   }, [images.length]);
 
-  // Pointer Events (Unified Mouse, Touch, Stylus Drag with Pointer Capture)
+  // Pointer Events — Only capture for mouse drags, preserving native touch scroll
   const onPointerDown = (e: React.PointerEvent) => {
-    // Only capture primary mouse click or touch
-    if (e.button !== 0 && e.pointerType === "mouse") return;
+    if (e.pointerType === "touch" || (e.button !== 0 && e.pointerType === "mouse")) return;
     const el = scrollRef.current;
     if (!el) return;
 
@@ -71,12 +62,12 @@ export function CircularGallery({
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
-      // Fallback if pointer capture fails
+      /* noop */
     }
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
-    if (!isDragging.current || !scrollRef.current) return;
+    if (!isDragging.current || !scrollRef.current || e.pointerType === "touch") return;
     const currentX = e.clientX;
     const delta = currentX - startX.current;
 
@@ -99,21 +90,24 @@ export function CircularGallery({
         e.currentTarget.releasePointerCapture(e.pointerId);
       }
     } catch {
-      // Ignore release errors
+      /* noop */
     }
   };
 
   // Smooth Navigation Helper (Non-queueing scroll targets)
-  const navigateToCard = useCallback((targetIndex: number) => {
-    const el = scrollRef.current;
-    if (!el || images.length === 0) return;
-    const children = Array.from(el.children) as HTMLElement[];
-    const targetChild = children[targetIndex];
-    if (targetChild) {
-      const targetLeft = targetChild.offsetLeft - (el.clientWidth - targetChild.offsetWidth) / 2;
-      el.scrollTo({ left: targetLeft, behavior: "smooth" });
-    }
-  }, [images.length]);
+  const navigateToCard = useCallback(
+    (targetIndex: number) => {
+      const el = scrollRef.current;
+      if (!el || images.length === 0) return;
+      const children = Array.from(el.children) as HTMLElement[];
+      const targetChild = children[targetIndex];
+      if (targetChild) {
+        const targetLeft = targetChild.offsetLeft - (el.clientWidth - targetChild.offsetWidth) / 2;
+        el.scrollTo({ left: targetLeft, behavior: "smooth" });
+      }
+    },
+    [images.length]
+  );
 
   // Keyboard navigation
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -165,15 +159,16 @@ export function CircularGallery({
         {items.map((img, i) => {
           const realIdx = ((i % images.length) + images.length) % images.length;
           const isActive = realIdx === activeIdx;
+          const isNearActive = Math.abs(realIdx - activeIdx) <= 2;
 
           return (
             <div
               key={i}
               className={cn(
-                "relative shrink-0 overflow-hidden rounded-[1.5rem] border border-white/[0.08] transition-all duration-500 ease-out",
+                "relative shrink-0 overflow-hidden rounded-[1.5rem] border transition-[transform,opacity] duration-300 ease-out",
                 isActive
-                  ? "scale-100 opacity-100 shadow-[0_20px_50px_rgba(0,0,0,0.6)] border-gold/40"
-                  : "scale-90 opacity-45 hover:opacity-70"
+                  ? "scale-100 opacity-100 border-gold/40 shadow-lg"
+                  : "scale-90 opacity-45 hover:opacity-70 border-white/[0.08]"
               )}
               style={{
                 scrollSnapAlign: "center",
@@ -187,7 +182,7 @@ export function CircularGallery({
               <img
                 src={img.url}
                 alt={img.title}
-                loading="eager"
+                loading={isNearActive ? "eager" : "lazy"}
                 decoding="async"
                 className="h-full w-full object-cover pointer-events-none"
                 draggable={false}
