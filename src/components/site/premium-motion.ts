@@ -210,15 +210,43 @@ export function usePageTransition() {
     }
     if (isTransitioning) { callback(); return; }
 
-    // Completely bypass page transition curtain on mobile/touch devices for instant switching testing
-    if (window.matchMedia("(pointer: coarse)").matches) {
+    const isCoarse = window.matchMedia("(pointer: coarse)").matches;
+    
+    // Tier C / Low-end hardware check: Instant 0ms transition
+    const isLowEnd = typeof navigator !== "undefined" && ((navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) || (("deviceMemory" in navigator) && (navigator as any).deviceMemory <= 4));
+    if (isLowEnd) {
       callback();
+      window.scrollTo(0, 0);
       return;
     }
 
+    // Tier B / Modern Mobile: Elegant, lightweight 140ms crossfade
+    if (isCoarse) {
+      isTransitioning = true;
+      const overlay = document.createElement("div");
+      overlay.style.cssText = "position:fixed;inset:0;z-index:9998;background:#0b0b0e;opacity:0;transition:opacity 140ms ease-out;pointer-events:none;";
+      document.body.appendChild(overlay);
+
+      requestAnimationFrame(() => {
+        overlay.style.opacity = "1";
+        setTimeout(() => {
+          callback();
+          window.scrollTo(0, 0);
+          setTimeout(() => {
+            overlay.style.opacity = "0";
+            setTimeout(() => {
+              overlay.remove();
+              isTransitioning = false;
+            }, 140);
+          }, 40);
+        }, 140);
+      });
+      return;
+    }
+
+    // Tier A / Desktop: Full luxury GSAP curtain wipe
     isTransitioning = true;
 
-    const isCoarse = window.matchMedia("(pointer: coarse)").matches;
     const { variant } = originRef.current;
     const tint = VARIANT_TINTS[variant] || "#0c0c0e";
     const bloom = VARIANT_BLOOM[variant] || "rgba(212,175,55,0.15)";
