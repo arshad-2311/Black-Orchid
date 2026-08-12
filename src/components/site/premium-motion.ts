@@ -15,12 +15,17 @@ const prefersReducedMotion = () =>
 
 /* =========================================================
    LENIS — Global smooth scrolling
+   Bypassed on touch devices (pointer: coarse) to preserve
+   native 60fps iOS/Android momentum scrolling.
    ========================================================= */
 let lenisInstance: Lenis | null = null;
 
 export function useLenis() {
   useEffect(() => {
     if (prefersReducedMotion()) return;
+    // Skip Lenis on touch devices — native compositor scroll is faster
+    if (typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches) return;
+
     const lenis = new Lenis({
       duration: 1.1,
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),

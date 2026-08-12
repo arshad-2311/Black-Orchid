@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { useApp, type ViewKey } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,13 @@ const NAV: { label: string; view: ViewKey }[] = [
  * PillNav — floating glassmorphism pill navigation.
  * Transparent at top, glass blur after scroll. Active indicator slides.
  * Mobile: collapses into a compact pill that opens a fullscreen overlay.
+ *
+ * MOBILE PERFORMANCE:
+ * - Drawer is permanently mounted (no AnimatePresence mount/unmount cost).
+ * - Toggled via CSS transform: translateX(100%) / translateX(0) — GPU only.
+ * - No backdrop-filter on mobile overlay (solid dark bg instead).
+ * - No ambient-orb blur inside drawer.
+ * - contain: content isolates drawer layout from page reflow.
  */
 export function PillNav({ settings }: { settings: { restaurantName: string; tagline: string } | null }) {
   const { view, setView } = useApp();
@@ -46,10 +53,10 @@ export function PillNav({ settings }: { settings: { restaurantName: string; tagl
     };
   }, [mobileOpen]);
 
-  const go = (v: ViewKey) => {
+  const go = useCallback((v: ViewKey) => {
     setView(v);
     setMobileOpen(false);
-  };
+  }, [setView]);
 
   return (
     <>
@@ -120,50 +127,80 @@ export function PillNav({ settings }: { settings: { restaurantName: string; tagl
         </div>
       </motion.header>
 
-      {/* Mobile fullscreen overlay with iPhone home indicator safe-area padding */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="fixed inset-0 z-[60] lg:hidden"
-          >
-            <div className="absolute inset-0 bg-background/97 backdrop-blur-md" onClick={() => setMobileOpen(false)} />
-            <div className="ambient-orb" style={{ width: 320, height: 320, background: "rgba(212,175,55,0.12)", top: "20%", right: "10%" }} />
-            <motion.nav
-              initial="hidden"
-              animate="show"
-              variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05, delayChildren: 0.05 } } }}
-              className="relative flex h-full flex-col items-center justify-center gap-2 px-6"
-              style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))", paddingTop: "max(2rem, env(safe-area-inset-top))" }}
-              aria-label="Mobile navigation"
-            >
-              {NAV.map((item) => (
-                <motion.button
-                  key={item.view}
-                  variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } } }}
-                  onClick={() => go(item.view)}
-                  className={cn(
-                    "font-[family-name:var(--font-playfair)] text-4xl font-medium transition-colors active:scale-95 sm:text-5xl",
-                    view === item.view ? "text-gold-gradient font-semibold" : "text-foreground/80 hover:text-gold"
-                  )}
-                >
-                  {item.label}
-                </motion.button>
-              ))}
-              <motion.button
-                variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { delay: 0.3 } } }}
-                onClick={() => go("reservation")}
-                className="mt-8 rounded-full bg-gold-gradient px-8 py-3.5 font-sans text-sm font-semibold uppercase tracking-[0.2em] text-black active:scale-95"
-              >
-                Reserve a Table
-              </motion.button>
-            </motion.nav>
-          </motion.div>
+      {/*
+        Mobile fullscreen overlay — PERMANENTLY MOUNTED, CSS-only transition.
+        No AnimatePresence, no Framer mount/unmount, no backdrop-filter blur.
+        Slide in via transform: translateX for pure compositor animation.
+      */}
+      <div
+        className={cn(
+          "mobile-nav-drawer fixed inset-0 z-[60] lg:hidden",
+          mobileOpen ? "mobile-nav-drawer--open" : ""
         )}
-      </AnimatePresence>
+        style={{
+          /* Layout containment: isolate from page reflow */
+          contain: "content",
+          /* Start offscreen; CSS transitions handle open/close */
+          visibility: mobileOpen ? "visible" : "hidden",
+          transitionProperty: "visibility",
+          transitionDelay: mobileOpen ? "0ms" : "280ms",
+        }}
+      >
+        {/* Scrim overlay — solid dark bg, no backdrop-filter */}
+        <div
+          className="absolute inset-0"
+          onClick={() => setMobileOpen(false)}
+          style={{
+            background: "rgba(11, 11, 14, 0.97)",
+            opacity: mobileOpen ? 1 : 0,
+            transition: "opacity 200ms ease-out",
+            willChange: "opacity",
+          }}
+        />
+        {/* Nav panel — slides in from right via translateX */}
+        <nav
+          className="relative flex h-full flex-col items-center justify-center gap-3 px-6"
+          style={{
+            paddingBottom: "max(2rem, env(safe-area-inset-bottom))",
+            paddingTop: "max(2rem, env(safe-area-inset-top))",
+            transform: mobileOpen ? "translateX(0)" : "translateX(8%)",
+            opacity: mobileOpen ? 1 : 0,
+            transition: "transform 240ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease-out",
+            willChange: "transform, opacity",
+          }}
+          aria-label="Mobile navigation"
+        >
+          {NAV.map((item, i) => (
+            <button
+              key={item.view}
+              onClick={() => go(item.view)}
+              className={cn(
+                "font-[family-name:var(--font-playfair)] text-4xl font-medium active:scale-95 sm:text-5xl",
+                view === item.view ? "text-gold-gradient font-semibold" : "text-foreground/80"
+              )}
+              style={{
+                /* Staggered entrance via CSS transition-delay — no JS needed */
+                transform: mobileOpen ? "translateY(0)" : "translateY(12px)",
+                opacity: mobileOpen ? 1 : 0,
+                transition: `transform 280ms cubic-bezier(0.22, 1, 0.36, 1) ${mobileOpen ? i * 30 : 0}ms, opacity 220ms ease-out ${mobileOpen ? i * 30 : 0}ms`,
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+          <button
+            onClick={() => go("reservation")}
+            className="mt-8 rounded-full bg-gold-gradient px-8 py-3.5 font-sans text-sm font-semibold uppercase tracking-[0.2em] text-black active:scale-95"
+            style={{
+              transform: mobileOpen ? "translateY(0)" : "translateY(12px)",
+              opacity: mobileOpen ? 1 : 0,
+              transition: `transform 280ms cubic-bezier(0.22, 1, 0.36, 1) ${mobileOpen ? NAV.length * 30 : 0}ms, opacity 220ms ease-out ${mobileOpen ? NAV.length * 30 : 0}ms`,
+            }}
+          >
+            Reserve a Table
+          </button>
+        </nav>
+      </div>
     </>
   );
 }
