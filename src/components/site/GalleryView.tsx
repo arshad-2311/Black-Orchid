@@ -66,18 +66,19 @@ export function GalleryView() {
         </div>
       </section>
 
-      {/* ============== FILTERS — centered pills with sliding gold indicator ============== */}
-      <section className="py-10 sm:py-14">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="no-scrollbar flex flex-wrap justify-center gap-2">
+      {/* ============== FILTERS — single horizontal editorial rail ============== */}
+      <section className="py-6 sm:py-10">
+        <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
+          <div className="no-scrollbar flex items-center justify-start sm:justify-center gap-2 overflow-x-auto px-4 py-2 touch-pan-x">
             {CATEGORIES.map((c) => (
               <FilterPill
                 key={c}
                 active={cat === c}
-                onClick={() => {
+                onClick={(btnEl) => {
                   setCat(c);
                   setVisible(12);
                   setLbIndex(null);
+                  btnEl?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
                 }}
               >
                 {c}
@@ -167,21 +168,21 @@ function FilterPill({
   children,
 }: {
   active: boolean;
-  onClick: () => void;
+  onClick: (el: HTMLButtonElement) => void;
   children: React.ReactNode;
 }) {
   return (
     <button
-      onClick={onClick}
+      onClick={(e) => onClick(e.currentTarget)}
       className={cn(
-        "relative flex min-h-[44px] items-center whitespace-nowrap rounded-full px-5 font-sans text-xs font-medium uppercase tracking-[0.2em] transition-colors duration-300",
-        active ? "text-black" : "text-muted-foreground hover:text-gold"
+        "relative flex min-h-[44px] shrink-0 items-center whitespace-nowrap rounded-full px-5 font-sans text-xs font-medium uppercase tracking-[0.2em] transition-colors duration-300 active:scale-95",
+        active ? "text-black font-semibold" : "text-foreground/70 hover:text-gold"
       )}
     >
       {active && (
         <motion.span
           layoutId="gallery-pill-bg"
-          className="absolute inset-0 rounded-full bg-gold-gradient"
+          className="absolute inset-0 rounded-full bg-gold-gradient shadow-[0_0_12px_rgba(212,175,55,0.3)]"
           transition={{ type: "spring", stiffness: 400, damping: 35 }}
         />
       )}

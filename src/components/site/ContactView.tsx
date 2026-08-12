@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import type { SiteSettings } from "@/lib/types";
 
 const inputClass =
-  "h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm text-foreground placeholder:text-muted-foreground/50 transition-all duration-200 focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/15 sm:h-14 sm:text-base";
+  "h-12 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-foreground placeholder:text-muted-foreground/50 transition-all duration-200 focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/15 sm:h-14";
 
 export function ContactView({ settings }: { settings: SiteSettings | null }) {
   const [form, setForm] = useState({ name: "", email: "", message: "" });

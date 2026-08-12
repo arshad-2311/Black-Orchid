@@ -57,7 +57,7 @@ export function AboutView({ settings }: { settings: SiteSettings | null }) {
       </section>
 
       {/* ============== STORY — asymmetric 12-col ============== */}
-      <section className="relative bg-background py-28 sm:py-36">
+      <section className="relative bg-background py-20 sm:py-36">
         <div className="ambient-orb pointer-events-none absolute top-32 right-[-8%]" style={{ width: 360, height: 360, background: "rgba(212,175,55,0.05)" }} />
         <div className="mx-auto grid max-w-7xl items-center gap-16 px-6 sm:px-10 lg:grid-cols-12 lg:gap-24">
           {/* Image column — narrow */}

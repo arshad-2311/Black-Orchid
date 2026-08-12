@@ -58,6 +58,7 @@ export function PillNav({ settings }: { settings: { restaurantName: string; tagl
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
         className="fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-4 sm:pt-5"
+        style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
       >
         <div
           className={cn(
@@ -70,7 +71,7 @@ export function PillNav({ settings }: { settings: { restaurantName: string; tagl
           {/* Logo wordmark */}
           <button
             onClick={() => go("home")}
-            className="flex h-10 items-center px-3 font-[family-name:var(--font-playfair)] text-lg font-semibold tracking-luxe text-foreground transition-colors hover:text-gold"
+            className="flex h-11 items-center px-3 font-[family-name:var(--font-playfair)] text-lg font-semibold tracking-luxe text-foreground transition-colors hover:text-gold active:scale-95"
             aria-label="Home"
           >
             {settings?.restaurantName || "Black Orchid"}
@@ -107,10 +108,10 @@ export function PillNav({ settings }: { settings: { restaurantName: string; tagl
             <span className="relative z-10">Reserve</span>
           </button>
 
-          {/* Mobile menu toggle */}
+          {/* Mobile menu toggle — 44px minimum touch target */}
           <button
             onClick={() => setMobileOpen((o) => !o)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-foreground transition-colors hover:border-gold/50 hover:text-gold lg:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 text-foreground transition-colors hover:border-gold/50 hover:text-gold active:scale-95 lg:hidden"
             aria-label="Toggle menu"
             aria-expanded={mobileOpen}
           >
@@ -119,42 +120,43 @@ export function PillNav({ settings }: { settings: { restaurantName: string; tagl
         </div>
       </motion.header>
 
-      {/* Mobile fullscreen overlay */}
+      {/* Mobile fullscreen overlay with iPhone home indicator safe-area padding */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.25 }}
             className="fixed inset-0 z-[60] lg:hidden"
           >
-            <div className="absolute inset-0 bg-background/97 backdrop-blur-2xl" onClick={() => setMobileOpen(false)} />
+            <div className="absolute inset-0 bg-background/97 backdrop-blur-md" onClick={() => setMobileOpen(false)} />
             <div className="ambient-orb" style={{ width: 320, height: 320, background: "rgba(212,175,55,0.12)", top: "20%", right: "10%" }} />
             <motion.nav
               initial="hidden"
               animate="show"
-              variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.1 } } }}
+              variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05, delayChildren: 0.05 } } }}
               className="relative flex h-full flex-col items-center justify-center gap-2 px-6"
+              style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))", paddingTop: "max(2rem, env(safe-area-inset-top))" }}
               aria-label="Mobile navigation"
             >
               {NAV.map((item) => (
                 <motion.button
                   key={item.view}
-                  variants={{ hidden: { opacity: 0, y: 30 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } } }}
+                  variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } } }}
                   onClick={() => go(item.view)}
                   className={cn(
-                    "font-[family-name:var(--font-playfair)] text-4xl font-medium transition-colors sm:text-5xl",
-                    view === item.view ? "text-gold-gradient" : "text-foreground/80 hover:text-gold"
+                    "font-[family-name:var(--font-playfair)] text-4xl font-medium transition-colors active:scale-95 sm:text-5xl",
+                    view === item.view ? "text-gold-gradient font-semibold" : "text-foreground/80 hover:text-gold"
                   )}
                 >
                   {item.label}
                 </motion.button>
               ))}
               <motion.button
-                variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { delay: 0.5 } } }}
+                variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { delay: 0.3 } } }}
                 onClick={() => go("reservation")}
-                className="mt-8 rounded-full bg-gold-gradient px-8 py-3.5 font-sans text-sm font-semibold uppercase tracking-[0.2em] text-black"
+                className="mt-8 rounded-full bg-gold-gradient px-8 py-3.5 font-sans text-sm font-semibold uppercase tracking-[0.2em] text-black active:scale-95"
               >
                 Reserve a Table
               </motion.button>
