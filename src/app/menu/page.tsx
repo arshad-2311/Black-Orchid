@@ -7,7 +7,6 @@ import type { SiteSettings } from "@/lib/types";
 import { PillNav } from "@/components/site/PillNav";
 import { Footer } from "@/components/site/Footer";
 import { ScrollProgress, StickyReserve } from "@/components/site/Chrome";
-import { Cursor } from "@/components/site/Cursor";
 import { Loader } from "@/components/site/Loader";
 import { MenuView } from "@/components/site/MenuView";
 import { useLenis } from "@/components/site/premium-motion";
@@ -26,7 +25,6 @@ export default function MenuPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Cursor />
       <Loader />
       <ScrollProgress />
       <PillNav settings={settings} />
