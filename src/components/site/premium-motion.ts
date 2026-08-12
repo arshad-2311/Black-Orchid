@@ -209,6 +209,13 @@ export function usePageTransition() {
       return;
     }
     if (isTransitioning) { callback(); return; }
+
+    // Completely bypass page transition curtain on mobile/touch devices for instant switching testing
+    if (window.matchMedia("(pointer: coarse)").matches) {
+      callback();
+      return;
+    }
+
     isTransitioning = true;
 
     const isCoarse = window.matchMedia("(pointer: coarse)").matches;
