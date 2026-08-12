@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyPassword, signToken, AUTH_COOKIE } from "@/lib/auth";
+import { ensureSeeded } from "@/lib/seed-inline";
 
 export async function POST(req: Request) {
   try {
+    await ensureSeeded();
     const { email, password } = await req.json();
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });

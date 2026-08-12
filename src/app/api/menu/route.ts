@@ -42,8 +42,11 @@ function parseItem(raw: any): MenuItem {
   };
 }
 
+import { ensureSeeded } from "@/lib/seed-inline";
+
 // Public: list categories with items (parsed)
 export async function GET() {
+  await ensureSeeded();
   const categories = await db.menuCategory.findMany({
     orderBy: { order: "asc" },
     include: { items: { orderBy: { order: "asc" } } },
