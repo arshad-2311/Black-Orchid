@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
-import { Playfair_Display, Cormorant_Garamond } from "next/font/google";
+import { Playfair_Display, Cormorant_Garamond, Cinzel_Decorative } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
@@ -22,6 +22,12 @@ const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
   style: ["normal", "italic"],
+});
+
+const cinzel = Cinzel_Decorative({
+  variable: "--font-cinzel",
+  subsets: ["latin"],
+  weight: ["400", "700"],
 });
 
 export const metadata: Metadata = {
@@ -94,7 +100,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${playfair.variable} ${cormorant.variable} antialiased bg-background text-foreground relative`}
+        className={`${geistSans.variable} ${playfair.variable} ${cormorant.variable} ${cinzel.variable} antialiased bg-background text-foreground relative`}
       >
         {/* Global film grain texture — barely visible, adds richness */}
         <div
