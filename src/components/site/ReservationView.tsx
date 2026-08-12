@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import type { Reservation } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { PremiumCalendar } from "./PremiumCalendar";
+import { encodePassToken } from "@/lib/pass-token";
 
 const STEPS = ["Date", "Time", "Guests", "Details", "Confirm"] as const;
 const LUNCH_TIMES = ["11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM"];
@@ -703,7 +704,7 @@ function SuccessScreen({
 
   useEffect(() => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const passData = {
+    const token = encodePassToken({
       id: reservation.id,
       n: reservation.name,
       p: reservation.phone || "",
@@ -712,23 +713,9 @@ function SuccessScreen({
       t: reservation.time,
       g: Number(reservation.guests),
       k: Number(reservation.kids || 0),
-    };
-    let tokenStr = "";
-    try {
-      tokenStr = btoa(encodeURIComponent(JSON.stringify(passData)));
-    } catch {}
+    });
 
-    const params = new URLSearchParams({
-      data: tokenStr,
-      n: reservation.name,
-      p: reservation.phone || "",
-      e: reservation.email || "",
-      d: reservation.date,
-      t: reservation.time,
-      g: String(reservation.guests),
-      k: String(reservation.kids || 0),
-    }).toString();
-    const verifyUrl = `${origin}/verify/${reservation.id}?${params}`;
+    const verifyUrl = `${origin}/verify/pass_${token}`;
     QRCode.toString(verifyUrl, { type: "svg", margin: 1, color: { dark: "#D4AF37", light: "#0A0A0C" } })
       .then(setQrSvg)
       .catch(() => { });

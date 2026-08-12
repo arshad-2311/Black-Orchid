@@ -18,6 +18,7 @@ function formatDate(iso: string): string {
 }
 
 import { ensureSeeded } from "@/lib/seed-inline";
+import { decodePassToken } from "@/lib/pass-token";
 
 export default async function VerifyPage({
   params,
@@ -29,19 +30,27 @@ export default async function VerifyPage({
   await ensureSeeded();
   const { id } = await params;
   const query = (await searchParams) || {};
-  let tokenData: any = null;
+
+  // Check if id is a path-encoded pass token (starts with pass_)
+  const tokenString = id.startsWith("pass_") ? id.slice(5) : id;
+  const pathTokenData = decodePassToken(tokenString);
+
+  let queryTokenData: any = null;
   if (query.data) {
     try {
-      tokenData = JSON.parse(decodeURIComponent(atob(query.data)));
+      queryTokenData = JSON.parse(decodeURIComponent(atob(query.data)));
     } catch {}
   }
+
+  const tokenData = pathTokenData || queryTokenData;
+  const targetId = tokenData?.id || id.replace(/^pass_/i, "");
 
   // Search by exact ID or tail reference in database
   let dbReservation = await db.reservation.findFirst({
     where: {
       OR: [
-        { id: id },
-        { id: { endsWith: id.replace(/^BO-RES-/i, "") } },
+        { id: targetId },
+        { id: { endsWith: targetId.replace(/^BO-RES-/i, "") } },
       ],
     },
   }).catch(() => null);
@@ -58,7 +67,7 @@ export default async function VerifyPage({
 
   // Use database reservation if found, otherwise construct verified guest pass from QR token/parameters
   const reservation = dbReservation || {
-    id: id,
+    id: targetId,
     name: tokenData?.n || query.n || "Valued Guest",
     phone: tokenData?.p || query.p || "Not Provided",
     email: tokenData?.e || query.e || "Not Provided",
@@ -66,7 +75,7 @@ export default async function VerifyPage({
     time: tokenData?.t || query.t || "7:00 PM",
     guests: tokenData?.g !== undefined ? Number(tokenData.g) : (Number(query.g) || 2),
     kids: tokenData?.k !== undefined ? Number(tokenData.k) : (Number(query.k) || 0),
-    special: "",
+    special: tokenData?.s || "",
     status: "CONFIRMED",
     createdAt: new Date(),
   };
