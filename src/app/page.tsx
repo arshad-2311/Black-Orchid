@@ -10,17 +10,15 @@ import { Footer } from "@/components/site/Footer";
 import { ScrollProgress, StickyReserve } from "@/components/site/Chrome";
 import { Loader } from "@/components/site/Loader";
 import { Home } from "@/components/site/Home";
-import dynamic from "next/dynamic";
-
-const MenuView = dynamic(() => import("@/components/site/MenuView").then((m) => m.MenuView), { ssr: false });
-const GalleryView = dynamic(() => import("@/components/site/GalleryView").then((m) => m.GalleryView), { ssr: false });
-const AboutView = dynamic(() => import("@/components/site/AboutView").then((m) => m.AboutView), { ssr: false });
-const BanquetView = dynamic(() => import("@/components/site/BanquetView").then((m) => m.BanquetView), { ssr: false });
-const CateringView = dynamic(() => import("@/components/site/CateringView").then((m) => m.CateringView), { ssr: false });
-const HoursView = dynamic(() => import("@/components/site/HoursView").then((m) => m.HoursView), { ssr: false });
-const ContactView = dynamic(() => import("@/components/site/ContactView").then((m) => m.ContactView), { ssr: false });
-const ReservationView = dynamic(() => import("@/components/site/ReservationView").then((m) => m.ReservationView), { ssr: false });
-const LegalView = dynamic(() => import("@/components/site/LegalView").then((m) => m.LegalView), { ssr: false });
+import { MenuView } from "@/components/site/MenuView";
+import { GalleryView } from "@/components/site/GalleryView";
+import { AboutView } from "@/components/site/AboutView";
+import { BanquetView } from "@/components/site/BanquetView";
+import { CateringView } from "@/components/site/CateringView";
+import { HoursView } from "@/components/site/HoursView";
+import { ContactView } from "@/components/site/ContactView";
+import { ReservationView } from "@/components/site/ReservationView";
+import { LegalView } from "@/components/site/LegalView";
 import { useLenis, usePageTransition } from "@/components/site/premium-motion";
 
 export default function Page() {
