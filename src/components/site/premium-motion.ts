@@ -138,26 +138,19 @@ export function useMagnetic<T extends HTMLElement = HTMLButtonElement>(options: 
    4. Shows a brief Black Orchid logo moment
    5. Swaps the content behind the overlay
    6. Retracts the glass to reveal the new page
-
-   Layers:
-   - Base: smoked black glass (#0B0B0F with glass tint)
-   - Gold radial bloom from origin
-   - Moving gold reflection streak
-   - Film grain overlay
-   - Black Orchid wordmark (logo moment)
-*/
+   ========================================================= */
 
 type TransitionVariant = "home" | "menu" | "gallery" | "banquet" | "catering" | "reservation" | "contact" | "default";
 
 const VARIANT_TINTS: Record<TransitionVariant, string> = {
-  home: "rgba(15,15,18,0.85)",
-  menu: "rgba(20,15,12,0.85)",
-  gallery: "rgba(12,12,15,0.82)",
-  banquet: "rgba(18,14,10,0.85)",
-  catering: "rgba(12,14,18,0.85)",
-  reservation: "rgba(18,16,10,0.88)",
-  contact: "rgba(10,10,12,0.82)",
-  default: "rgba(15,15,18,0.85)",
+  home: "rgba(15,15,18,0.98)",
+  menu: "rgba(20,15,12,0.98)",
+  gallery: "rgba(12,12,15,0.98)",
+  banquet: "rgba(18,14,10,0.98)",
+  catering: "rgba(12,14,18,0.98)",
+  reservation: "rgba(18,16,10,0.98)",
+  contact: "rgba(10,10,12,0.98)",
+  default: "rgba(15,15,18,0.98)",
 };
 
 const VARIANT_BLOOM: Record<TransitionVariant, string> = {
@@ -171,22 +164,17 @@ const VARIANT_BLOOM: Record<TransitionVariant, string> = {
   default: "rgba(212,175,55,0.15)",
 };
 
-// Singleton transition state — prevents overlapping transitions
 let isTransitioning = false;
 
 export function usePageTransition() {
-  // Store the last click coordinates so the transition can originate from there
   const originRef = useRef<{ x: number; y: number; variant: TransitionVariant }>({ x: 0, y: 0, variant: "default" });
 
-  // Capture click origins globally — listens for clicks on nav/CTA elements
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      // Check if the clicked element (or ancestor) is a navigation trigger
       const navEl = target.closest("button, a");
       if (!navEl) return;
-      // Check if this is a view-change trigger (has setView in its onClick or is a nav button)
-      const text = navEl.textContent.trim().toLowerCase();
+      const text = navEl.textContent?.trim().toLowerCase() || "";
       const isNavTrigger = [
         "home", "about", "menu", "banquet", "gallery", "catering", "hours", "contact",
         "reserve", "reserve a table", "explore menu", "view menu", "book the banquet",
@@ -199,7 +187,6 @@ export function usePageTransition() {
       const x = rect.left + rect.width / 2;
       const y = rect.top + rect.height / 2;
 
-      // Determine variant from the destination
       let variant: TransitionVariant = "default";
       if (text.includes("menu")) variant = "menu";
       else if (text.includes("gallery")) variant = "gallery";
@@ -212,7 +199,7 @@ export function usePageTransition() {
       originRef.current = { x, y, variant };
     };
 
-    document.addEventListener("click", onClick, true); // capture phase
+    document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);
   }, []);
 
@@ -224,27 +211,28 @@ export function usePageTransition() {
     if (isTransitioning) { callback(); return; }
     isTransitioning = true;
 
+    const isCoarse = window.matchMedia("(pointer: coarse)").matches;
     const { variant } = originRef.current;
-    const tint = VARIANT_TINTS[variant] || "rgba(10,10,12,0.95)";
+    const tint = VARIANT_TINTS[variant] || "#0c0c0e";
     const bloom = VARIANT_BLOOM[variant] || "rgba(212,175,55,0.15)";
+    const blurStyle = isCoarse ? "" : "backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);";
+    const wipeDuration = isCoarse ? 0.3 : 0.42;
 
-    // --- Build the vertical curtain wipe-up container (sample1.mp4 physics) ---
     const container = document.createElement("div");
     container.style.cssText = "position:fixed;inset:0;z-index:9998;pointer-events:none;overflow:hidden;";
 
-    // Main curtain panel — full viewport, wipes vertically (y: 100% -> 0% -> -100%)
     const curtain = document.createElement("div");
-    curtain.style.cssText = `position:absolute;inset:0;width:100vw;height:100vh;background:${tint};backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid rgba(212,175,55,0.4);border-bottom:1px solid rgba(212,175,55,0.4);transform:translateY(100%);will-change:transform;overflow:hidden;box-shadow:0 -20px 60px rgba(0,0,0,0.7);`;
+    curtain.style.cssText = `position:absolute;inset:0;width:100vw;height:100vh;background:${tint};${blurStyle}border-top:1px solid rgba(212,175,55,0.4);border-bottom:1px solid rgba(212,175,55,0.4);transform:translateY(100%);will-change:transform;overflow:hidden;box-shadow:0 -20px 60px rgba(0,0,0,0.7);`;
 
-    // Ambient radial gold bloom inside curtain
     const bloomLayer = document.createElement("div");
     bloomLayer.style.cssText = `position:absolute;inset:0;background:radial-gradient(circle at 50% 50%, ${bloom} 0%, transparent 65%);pointer-events:none;`;
 
-    // Film grain overlay inside curtain
-    const grain = document.createElement("div");
-    grain.style.cssText = "position:absolute;inset:0;opacity:0.03;mix-blend-overlay;pointer-events:none;background-image:url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\");";
+    let grain: HTMLDivElement | null = null;
+    if (!isCoarse) {
+      grain = document.createElement("div");
+      grain.style.cssText = "position:absolute;inset:0;opacity:0.03;mix-blend-overlay;pointer-events:none;background-image:url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\");";
+    }
 
-    // Centered luxury wordmark reveal
     const wordmark = document.createElement("div");
     wordmark.style.cssText = "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(0.96);will-change:transform,opacity;";
     wordmark.innerHTML = `
@@ -256,12 +244,11 @@ export function usePageTransition() {
     `;
 
     curtain.appendChild(bloomLayer);
-    curtain.appendChild(grain);
+    if (grain) curtain.appendChild(grain);
     curtain.appendChild(wordmark);
     container.appendChild(curtain);
     document.body.appendChild(container);
 
-    // --- GSAP Timeline: Vertical Curtain Wipe-Up (y: 100% -> 0% -> -100%) ---
     const tl = gsap.timeline({
       onComplete: () => {
         container.remove();
@@ -273,38 +260,33 @@ export function usePageTransition() {
       },
     });
 
-    // Phase 1: Wipe curtain UP from bottom to full screen (y: 100% -> 0%)
     tl.to(curtain, {
       y: "0%",
-      duration: 0.45,
+      duration: wipeDuration,
       ease: "power3.inOut",
     }, 0);
 
-    // Phase 2: Fade & scale wordmark in mid-swipe
     tl.to(wordmark, {
       opacity: 1,
       scale: 1,
-      duration: 0.22,
+      duration: 0.18,
       ease: "power2.out",
-    }, 0.2);
+    }, wipeDuration * 0.4);
 
-    // Phase 3: Swap React view at full screen cover (time = 0.42s)
-    tl.add(() => callback(), 0.42);
+    tl.add(() => callback(), wipeDuration * 0.9);
 
-    // Phase 4: Fade wordmark out
     tl.to(wordmark, {
       opacity: 0,
       scale: 0.96,
-      duration: 0.18,
+      duration: 0.14,
       ease: "power2.in",
-    }, 0.44);
+    }, wipeDuration * 0.95);
 
-    // Phase 5: Wipe curtain UP off the top of the screen (y: 0% -> -100%)
     tl.to(curtain, {
       y: "-100%",
-      duration: 0.45,
+      duration: wipeDuration,
       ease: "power3.inOut",
-    }, 0.45);
+    }, wipeDuration * 0.98);
   }, []);
 
   return { transition };
