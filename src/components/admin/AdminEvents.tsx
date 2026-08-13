@@ -39,9 +39,16 @@ export function AdminEvents() {
   };
 
   const remove = (e: EventItem) => {
+    setList((prev) => (prev ? prev.filter((item) => item.id !== e.id) : null));
     apiDelete(`/api/events/${e.id}`)
-      .then(() => { toast.success("Event deleted"); load(); })
-      .catch(() => toast.error("Delete failed"));
+      .then(() => {
+        toast.success("Event deleted");
+        load();
+      })
+      .catch((err) => {
+        toast.error(err instanceof Error ? err.message : "Delete failed");
+        load();
+      });
   };
 
   const publishedCount = list?.filter((e) => e.published).length ?? 0;

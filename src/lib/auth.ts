@@ -72,7 +72,8 @@ export function verifyToken(token: string | null | undefined): TokenPayload | nu
 export const AUTH_COOKIE = "bo_admin_token";
 
 /* ---------- Express-like header/cookie helpers for route handlers ---------- */
-export function getTokenFromRequest(req: Request): string | null {
+export function getTokenFromRequest(req?: Request): string | null {
+  if (!req || !req.headers) return null;
   // Prefer Authorization header, fall back to cookie
   const auth = req.headers.get("authorization");
   if (auth?.startsWith("Bearer ")) return auth.slice(7);

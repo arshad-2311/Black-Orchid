@@ -24,28 +24,29 @@ async function main() {
       published: true,
     }),
   });
-  const created = await (await createEvent(createReq)).json();
-  console.log("Created Event ID:", created.id);
+  const createdData = await (await createEvent(createReq)).json();
+  const createdId = createdData.event ? createdData.event.id : createdData.id;
+  console.log("Created Event ID:", createdId);
 
   // 3. Query GET /api/events
-  let res = await (await getEvents()).json();
-  let found = res.some((e: any) => e.id === created.id);
+  let res = await (await getEvents(new Request("http://localhost:3000/api/events"))).json();
+  let found = res.some((e: any) => e.id === createdId);
   console.log("Diwali Event visible in GET /api/events:", found ? "YES ✅" : "NO ❌");
 
   // 4. Delete Diwali event
   console.log("4. Deleting Diwali Event via DELETE /api/events/[id]...");
-  const deleteReq = new Request(`http://localhost:3000/api/events/${created.id}`, {
+  const deleteReq = new Request(`http://localhost:3000/api/events/${createdId}`, {
     method: "DELETE",
     headers: authHeaders,
   });
-  await deleteEvent(deleteReq, { params: Promise.resolve({ id: created.id }) });
+  await deleteEvent(deleteReq, { params: Promise.resolve({ id: createdId }) });
   console.log("Event deleted!");
 
   // 5. Re-run ensureSeeded() and query GET /api/events
   console.log("5. Re-running ensureSeeded() & checking GET /api/events again...");
   await ensureSeeded();
-  res = await (await getEvents()).json();
-  found = res.some((e: any) => e.id === created.id || e.title === "Diwali Special Feast");
+  res = await (await getEvents(new Request("http://localhost:3000/api/events"))).json();
+  found = res.some((e: any) => e.id === createdId || e.title === "Diwali Special Feast");
 
   console.log("=== FINAL VERIFICATION ===");
   console.log("Is Diwali Event still deleted after ensureSeeded():", !found ? "YES DELETED PERMANENTLY ✅" : "NO (RE-SEEDED) ❌");
