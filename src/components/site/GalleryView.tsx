@@ -33,7 +33,7 @@ export function GalleryView() {
       {/* ============== CINEMATIC HEADER ============== */}
       <section className="relative flex min-h-[70vh] items-center justify-center overflow-hidden cinematic-grain">
         <div className="absolute inset-0 -z-10">
-          <img src={IMAGES.interior[1]} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+          <img src={IMAGES.interior[1]} alt="" loading="eager" decoding="async" className="h-full w-full object-cover" />
         </div>
         <div className="absolute inset-0 bg-background/75" />
         <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background" />
@@ -96,30 +96,31 @@ export function GalleryView() {
               No images in this collection yet.
             </p>
           ) : (
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="popLayout">
               <motion.div
                 key={cat}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.2 }}
                 className="columns-2 gap-4 sm:columns-3 lg:columns-4"
               >
                 {shown.map((img, i) => (
                   <motion.button
                     key={img.id}
                     type="button"
-                    initial={{ opacity: 0, scale: 0.92 }}
+                    initial={{ opacity: 0, scale: 0.96 }}
                     whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true, margin: "-30px" }}
-                    transition={{ duration: 0.6, delay: (i % 4) * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                    transition={{ duration: 0.4, delay: Math.min((i % 4) * 0.04, 0.12), ease: [0.22, 1, 0.36, 1] }}
                     onClick={() => setLbIndex(i)}
-                    className="group relative mb-4 block w-full overflow-hidden rounded-2xl border border-white/[0.06] break-inside-avoid"
+                    className="group relative mb-4 block w-full overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.04] break-inside-avoid min-h-[160px]"
                   >
                     <img
                       src={img.url}
                       alt={img.title}
-                      loading="lazy"
+                      loading={i < 4 ? "eager" : "lazy"}
+                      decoding="async"
                       className="w-full object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />

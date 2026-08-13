@@ -72,7 +72,7 @@ export function MenuView() {
       {/* ============== CINEMATIC HEADER ============== */}
       <section className="relative flex min-h-[70vh] items-center justify-center overflow-hidden cinematic-grain">
         <div className="absolute inset-0 -z-10">
-          <img src={IMAGES.food[0]} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+          <img src={IMAGES.food[0]} alt="" loading="eager" decoding="async" className="h-full w-full object-cover" />
         </div>
         <div className="absolute inset-0 bg-background/75" />
         <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background" />
@@ -184,14 +184,14 @@ export function MenuView() {
       <section className="relative py-16 sm:py-24">
         <div className="ambient-orb pointer-events-none absolute top-40 left-[-10%]" style={{ width: 360, height: 360, background: "rgba(212,175,55,0.04)" }} />
         <div className="relative mx-auto max-w-4xl px-4 sm:px-6">
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="popLayout">
             {totalShown === 0 ? (
               <motion.div
                 key="empty"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.2 }}
                 className="py-32 text-center"
               >
                 <p className="font-[family-name:var(--font-cormorant)] text-2xl italic text-muted-foreground sm:text-3xl">
@@ -201,10 +201,10 @@ export function MenuView() {
             ) : (
               <motion.div
                 key={active}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               >
                 {(() => {
                   let runningIndex = 0;
@@ -261,12 +261,12 @@ export function MenuView() {
 
 /* ============== DISH ROW — editorial, clickable to open showcase ============== */
 function DishRow({ item, categoryName, index, onOpen }: { item: MenuItem; categoryName: string; index: number; onOpen: () => void }) {
+  const isCoarse = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
   return (
     <motion.button
-      layout
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: isCoarse ? 8 : 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.55, delay: Math.min(index * 0.05, 0.5), ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: isCoarse ? 0.25 : 0.4, delay: isCoarse ? 0 : Math.min(index * 0.02, 0.15), ease: [0.22, 1, 0.36, 1] }}
       onClick={onOpen}
       className="group relative flex w-full cursor-pointer gap-4 border-b border-white/[0.06] px-3 py-8 text-left transition-colors duration-300 hover:bg-white/[0.02] sm:gap-6 sm:px-4"
     >

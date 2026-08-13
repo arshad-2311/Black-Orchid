@@ -57,8 +57,25 @@ export function RevealText({
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const inView = useInView(ref, { once: true, margin: "-20px" });
-  const words = text.split(" ");
+  const isCoarse = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
   const MotionTag = motion[Tag];
+
+  // Mobile/Coarse Touch: Direct fade-in without word splitting or long delays
+  if (isCoarse) {
+    return (
+      <MotionTag
+        ref={ref}
+        className={className}
+        initial={{ opacity: 0, y: 8 }}
+        animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      >
+        {text}
+      </MotionTag>
+    );
+  }
+
+  const words = text.split(" ");
   return (
     <MotionTag
       ref={ref}
@@ -115,15 +132,15 @@ export function ImageReveal({
   const isCoarse = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
 
   return (
-    <div ref={ref} className={cn("relative overflow-hidden", rounded, className)}>
+    <div ref={ref} className={cn("relative overflow-hidden bg-white/[0.04]", rounded, className)}>
       <motion.img
         src={src}
         alt={alt}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
         initial={isCoarse ? { opacity: 0 } : { clipPath: "inset(0 0 100% 0)", scale: 1.15 }}
-        animate={inView ? (isCoarse ? { opacity: 1 } : { clipPath: "inset(0 0 0 0)", scale: 1 }) : {}}
-        transition={{ duration: isCoarse ? 0.4 : 0.9, ease: [0.22, 1, 0.36, 1] }}
+        animate={inView || priority ? (isCoarse ? { opacity: 1 } : { clipPath: "inset(0 0 0 0)", scale: 1 }) : {}}
+        transition={{ duration: isCoarse ? 0.3 : 0.9, ease: [0.22, 1, 0.36, 1] }}
         className={cn("h-full w-full object-cover", imgClassName)}
       />
     </div>
