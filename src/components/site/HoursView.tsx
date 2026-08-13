@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { IMAGES } from "@/lib/images";
 import { Eyebrow, LuxuryButton, OrnamentDivider } from "./primitives";
 import { RevealGroup, RevealItem, RevealText } from "./motion";
@@ -84,8 +84,7 @@ export function HoursView({ settings }: { settings: SiteSettings | null }) {
                           </span>
                         )}
                       </div>
-                      <span className="flex items-center gap-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground sm:text-xl">
-                        <Clock className="h-4 w-4 text-gold/60" />
+                      <span className="font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground sm:text-xl">
                         {d.hours}
                       </span>
                     </motion.div>
