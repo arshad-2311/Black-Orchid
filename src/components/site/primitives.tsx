@@ -12,7 +12,6 @@ import { useMagnetic } from "./premium-motion";
 export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-3 font-sans text-[11px] font-medium uppercase tracking-[0.35em] text-gold", className)}>
-      <span className="h-px w-8 bg-gold/60" />
       {children}
     </span>
   );
