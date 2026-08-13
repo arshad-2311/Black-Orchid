@@ -170,7 +170,7 @@ export function MenuView() {
               className={cn(
                 "flex h-11 min-h-[44px] items-center gap-2 rounded-full border px-4 font-sans text-xs font-medium uppercase tracking-[0.2em] transition-all duration-300",
                 vegOnly
-                  ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+                  ? "border-emerald-600/60 bg-emerald-950/40 text-emerald-400 shadow-[0_0_12px_rgba(5,150,105,0.15)]"
                   : "border-white/10 text-muted-foreground hover:border-gold/40 hover:text-gold"
               )}
             >

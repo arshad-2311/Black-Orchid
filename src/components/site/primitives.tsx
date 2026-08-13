@@ -156,8 +156,8 @@ export function SpiceLevel({ level }: { level: number }) {
 
 export function VegBadge({ veg }: { veg: boolean }) {
   return (
-    <span title={veg ? "Vegetarian" : "Non-Vegetarian"} className={cn("inline-flex h-4 w-4 items-center justify-center rounded-[3px] border", veg ? "border-emerald-500/70" : "border-red-500/70")}>
-      <span className={cn("h-1.5 w-1.5 rounded-full", veg ? "bg-emerald-500" : "bg-red-500")} />
+    <span title={veg ? "Vegetarian" : "Non-Vegetarian"} className={cn("inline-flex h-4 w-4 items-center justify-center rounded-[3px] border", veg ? "border-emerald-600/60 bg-emerald-950/30" : "border-red-600/60 bg-red-950/30")}>
+      <span className={cn("h-1.5 w-1.5 rounded-full", veg ? "bg-emerald-600" : "bg-red-600")} />
     </span>
   );
 }
