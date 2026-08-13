@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { validateAndNormalizePhone } from "@/lib/phone";
 import { dispatchReservationNotifications } from "@/lib/notifications";
 

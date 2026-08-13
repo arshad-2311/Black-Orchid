@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import type { MenuItem } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 // Parse the raw Prisma menu item (with JSON string fields) into the client type
 function parseItem(raw: any): MenuItem {
   let images: string[] = [];

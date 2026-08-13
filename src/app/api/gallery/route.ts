@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { ensureSeeded } from "@/lib/seed-inline";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   await ensureSeeded();
   const images = await db.galleryImage.findMany({ orderBy: { order: "asc" } });

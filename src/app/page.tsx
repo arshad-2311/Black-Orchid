@@ -54,6 +54,8 @@ export default function Page() {
   // Animate view changes with a luxury overlay transition
   useEffect(() => {
     if (view === displayedView) return;
+    // Re-fetch latest site settings whenever active view changes
+    apiGet<SiteSettings>("/api/settings").then(setSettings).catch(() => {});
     transition(() => {
       setDisplayedView(view);
       scrollToTop();
@@ -71,17 +73,17 @@ export default function Page() {
       <ScrollProgress />
       <PillNav settings={settings} />
       <div className="flex-1">
-        {displayedView === "home" && <Home settings={settings} />}
-        {displayedView === "about" && <AboutView settings={settings} />}
-        {displayedView === "menu" && <MenuView />}
-        {displayedView === "banquet" && <BanquetView settings={settings} />}
-        {displayedView === "gallery" && <GalleryView />}
-        {displayedView === "catering" && <CateringView settings={settings} />}
-        {displayedView === "hours" && <HoursView settings={settings} />}
-        {displayedView === "contact" && <ContactView settings={settings} />}
-        {displayedView === "reservation" && <ReservationView />}
-        {displayedView === "privacy" && <LegalView kind="privacy" />}
-        {displayedView === "terms" && <LegalView kind="terms" />}
+        {displayedView === "home" && <Home key="home" settings={settings} />}
+        {displayedView === "about" && <AboutView key="about" settings={settings} />}
+        {displayedView === "menu" && <MenuView key="menu" />}
+        {displayedView === "banquet" && <BanquetView key="banquet" settings={settings} />}
+        {displayedView === "gallery" && <GalleryView key="gallery" />}
+        {displayedView === "catering" && <CateringView key="catering" settings={settings} />}
+        {displayedView === "hours" && <HoursView key="hours" settings={settings} />}
+        {displayedView === "contact" && <ContactView key="contact" settings={settings} />}
+        {displayedView === "reservation" && <ReservationView key="reservation" />}
+        {displayedView === "privacy" && <LegalView key="privacy" kind="privacy" />}
+        {displayedView === "terms" && <LegalView key="terms" kind="terms" />}
       </div>
       <Footer settings={settings} />
       <StickyReserve />

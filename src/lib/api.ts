@@ -16,8 +16,14 @@ function handleAuthError(status: number) {
 
 export async function apiGet<T = unknown>(path: string): Promise<T> {
   const res = await fetch(path, {
-    headers: { Accept: "application/json", ...(await authHeaders()) },
+    headers: {
+      Accept: "application/json",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
+      ...(await authHeaders()),
+    },
     credentials: "include",
+    cache: "no-store",
   });
   if (!res.ok) {
     handleAuthError(res.status);

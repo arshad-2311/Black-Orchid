@@ -59,7 +59,7 @@ export function CateringView({ settings }: { settings: SiteSettings | null }) {
     apiGet<CateringPackage[]>("/api/catering").then(setPackages).catch(() => {});
   }, []);
 
-  const displayPackages = packages && packages.length > 0 ? packages : DEFAULT_PACKAGES;
+  const displayPackages = packages !== null ? packages : DEFAULT_PACKAGES;
 
   return (
     <div>
