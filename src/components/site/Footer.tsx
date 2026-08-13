@@ -71,7 +71,7 @@ export function Footer({ settings }: { settings: SiteSettings | null }) {
             </p>
             <div className="mt-6">
               <a
-                href={settings?.instagram || "https://www.instagram.com/blackorchid_annanagar/?hl=en"}
+                href={(settings?.instagram && settings.instagram.includes("instagram.com")) ? settings.instagram : "https://www.instagram.com/blackorchid_annanagar/?hl=en"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group inline-flex items-center gap-3 rounded-full border border-gold/30 bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-foreground transition-all duration-300 hover:border-gold hover:bg-gold/10 hover:text-gold"

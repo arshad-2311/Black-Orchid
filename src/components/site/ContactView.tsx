@@ -7,8 +7,12 @@ import { RevealGroup, RevealItem, RevealText } from "./motion";
 import { IMAGES } from "@/lib/images";
 import type { SiteSettings } from "@/lib/types";
 
+const OFFICIAL_INSTAGRAM = "https://www.instagram.com/blackorchid_annanagar/?hl=en";
+
 export function ContactView({ settings }: { settings: SiteSettings | null }) {
-  const instagramUrl = settings?.instagram || "https://www.instagram.com/blackorchid_annanagar/?hl=en";
+  const instagramUrl = (settings?.instagram && settings.instagram.includes("instagram.com"))
+    ? settings.instagram
+    : OFFICIAL_INSTAGRAM;
 
   const info = [
     {
