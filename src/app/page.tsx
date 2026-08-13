@@ -19,7 +19,7 @@ import { HoursView } from "@/components/site/HoursView";
 import { ContactView } from "@/components/site/ContactView";
 import { ReservationView } from "@/components/site/ReservationView";
 import { LegalView } from "@/components/site/LegalView";
-import { useLenis, usePageTransition } from "@/components/site/premium-motion";
+import { useLenis, usePageTransition, scrollToTop } from "@/components/site/premium-motion";
 
 export default function Page() {
   const { view, setView } = useApp();
@@ -32,6 +32,13 @@ export default function Page() {
 
   // Page transition
   const { transition } = usePageTransition();
+
+  // Disable browser scroll restoration globally for seamless custom view routing
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.history && "scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+  }, []);
 
   // Hydrate on mount
   useEffect(() => {
@@ -49,9 +56,14 @@ export default function Page() {
     if (view === displayedView) return;
     transition(() => {
       setDisplayedView(view);
-      window.scrollTo({ top: 0, behavior: "auto" });
+      scrollToTop();
     });
   }, [view, displayedView, transition]);
+
+  // Always reset scroll to top whenever the active view component renders in the DOM
+  useEffect(() => {
+    scrollToTop();
+  }, [displayedView]);
 
   return (
     <div className="flex min-h-screen flex-col">

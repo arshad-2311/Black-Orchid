@@ -9,7 +9,7 @@ import { Footer } from "@/components/site/Footer";
 import { ScrollProgress, StickyReserve } from "@/components/site/Chrome";
 import { Loader } from "@/components/site/Loader";
 import { MenuView } from "@/components/site/MenuView";
-import { useLenis } from "@/components/site/premium-motion";
+import { useLenis, scrollToTop } from "@/components/site/premium-motion";
 
 export default function MenuPage() {
   const { setView } = useApp();
@@ -19,6 +19,7 @@ export default function MenuPage() {
 
   useEffect(() => {
     setView("menu");
+    scrollToTop();
     hydrateAdmin();
     apiGet<SiteSettings>("/api/settings").then(setSettings).catch(() => {});
   }, [setView]);

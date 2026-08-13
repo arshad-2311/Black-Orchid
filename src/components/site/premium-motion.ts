@@ -171,6 +171,28 @@ const VARIANT_BLOOM: Record<TransitionVariant, string> = {
 
 let isTransitioning = false;
 
+export function scrollToTop() {
+  if (typeof window === "undefined") return;
+
+  if (window.history && "scrollRestoration" in window.history) {
+    window.history.scrollRestoration = "manual";
+  }
+
+  const reset = () => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    if (lenisInstance) {
+      lenisInstance.scrollTo(0, { immediate: true });
+    }
+  };
+
+  reset();
+  requestAnimationFrame(reset);
+  setTimeout(reset, 30);
+  setTimeout(reset, 100);
+}
+
 export function usePageTransition() {
   const originRef = useRef<{ x: number; y: number; variant: TransitionVariant }>({ x: 0, y: 0, variant: "default" });
 
@@ -211,9 +233,10 @@ export function usePageTransition() {
   const transition = useCallback((callback: () => void) => {
     if (prefersReducedMotion() || typeof window === "undefined") {
       callback();
+      scrollToTop();
       return;
     }
-    if (isTransitioning) { callback(); return; }
+    if (isTransitioning) { callback(); scrollToTop(); return; }
 
     const isCoarse = window.matchMedia("(pointer: coarse)").matches;
     
@@ -221,7 +244,7 @@ export function usePageTransition() {
     const isLowEnd = typeof navigator !== "undefined" && ((navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) || (("deviceMemory" in navigator) && (navigator as any).deviceMemory <= 4));
     if (isLowEnd) {
       callback();
-      window.scrollTo(0, 0);
+      scrollToTop();
       return;
     }
 
@@ -236,7 +259,7 @@ export function usePageTransition() {
         overlay.style.opacity = "1";
         setTimeout(() => {
           callback();
-          window.scrollTo(0, 0);
+          scrollToTop();
           setTimeout(() => {
             overlay.style.opacity = "0";
             setTimeout(() => {
