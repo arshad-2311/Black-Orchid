@@ -11,6 +11,39 @@ import { ImageReveal, RevealGroup, RevealItem, RevealText } from "./motion";
 import { useApp } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
+const DEFAULT_PACKAGES: CateringPackage[] = [
+  {
+    id: "pkg-1",
+    name: "Cocktail Reception",
+    guests: "25 – 100 Guests",
+    description: "An elegant evening of passed hors d'oeuvres, signature cocktails, and live station theatre.",
+    price: 65,
+    image: IMAGES.drinks[0],
+    features: "8 Passed Canapés | 2 Signature Cocktails | Dedicated Mixologist | Full Service Staff | Glassware & Decor Setup",
+    order: 0,
+  },
+  {
+    id: "pkg-2",
+    name: "Grand Banquet Buffet",
+    guests: "50 – 250 Guests",
+    description: "Our signature multi-course buffet featuring Indian, Pan-Asian, and Continental specialities.",
+    price: 95,
+    image: IMAGES.food[4],
+    features: "6 Starters & 8 Main Courses | Live Grilling Station | Full Dessert Symphony | Executive Chef Supervision | Complete Linen & Tableware",
+    order: 1,
+  },
+  {
+    id: "pkg-3",
+    name: "Royal Plated Gala",
+    guests: "30 – 150 Guests",
+    description: "An opulent 5-course sit-down dinner with wine pairings and white-glove butler service.",
+    price: 140,
+    image: IMAGES.banquet[2],
+    features: "5-Course Gourmet Plated Dinner | Sommelier Wine Pairings | White-Glove Butler Service | Custom Printed Menus & Place Cards | Pre-Event Tasting for 4",
+    order: 2,
+  },
+];
+
 const STEPS = [
   { n: "01", title: "Consultation", desc: "We meet to understand your occasion, your guests, your vision." },
   { n: "02", title: "Custom Menu", desc: "Our chef composes a bespoke menu tuned to your palate and theme." },
@@ -25,6 +58,8 @@ export function CateringView({ settings }: { settings: SiteSettings | null }) {
   useEffect(() => {
     apiGet<CateringPackage[]>("/api/catering").then(setPackages).catch(() => {});
   }, []);
+
+  const displayPackages = packages && packages.length > 0 ? packages : DEFAULT_PACKAGES;
 
   return (
     <div>
@@ -78,7 +113,7 @@ export function CateringView({ settings }: { settings: SiteSettings | null }) {
           </div>
 
           <RevealGroup className="mt-14 grid gap-6 lg:grid-cols-3">
-            {(packages ?? []).map((p, i) => {
+            {displayPackages.map((p, i) => {
               const popular = i === 1;
               const features = p.features ? p.features.split("|").map((f) => f.trim()).filter(Boolean) : [];
               return (

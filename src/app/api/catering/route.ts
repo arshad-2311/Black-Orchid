@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import { ensureSeeded } from "@/lib/seed-inline";
 
 export async function GET() {
+  await ensureSeeded();
   const packages = await db.cateringPackage.findMany({ orderBy: { order: "asc" } });
   return NextResponse.json(packages);
 }
