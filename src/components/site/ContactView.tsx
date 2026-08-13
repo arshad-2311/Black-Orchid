@@ -1,13 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Clock, Facebook, Instagram, Mail, MapPin, Phone, Twitter } from "lucide-react";
+import { ArrowUpRight, Clock, Instagram, Mail, MapPin, Phone } from "lucide-react";
 import { Eyebrow, LuxuryButton, OrnamentDivider } from "./primitives";
 import { RevealGroup, RevealItem, RevealText } from "./motion";
 import { IMAGES } from "@/lib/images";
 import type { SiteSettings } from "@/lib/types";
 
 export function ContactView({ settings }: { settings: SiteSettings | null }) {
+  const instagramUrl = settings?.instagram || "https://www.instagram.com/blackorchid_annanagar/?hl=en";
+
   const info = [
     {
       Icon: MapPin,
@@ -61,12 +63,6 @@ export function ContactView({ settings }: { settings: SiteSettings | null }) {
         </p>
       ),
     },
-  ];
-
-  const socials = [
-    ...(settings?.facebook ? [{ Icon: Facebook, href: settings.facebook }] : [{ Icon: Facebook, href: "https://www.facebook.com/blackorchidchennai/" }]),
-    ...(settings?.instagram ? [{ Icon: Instagram, href: settings.instagram }] : []),
-    ...(settings?.twitter ? [{ Icon: Twitter, href: settings.twitter }] : []),
   ];
 
   return (
@@ -135,23 +131,37 @@ export function ContactView({ settings }: { settings: SiteSettings | null }) {
             ))}
           </RevealGroup>
 
-          <div className="mt-14 flex flex-col items-center">
-            <p className="font-sans text-[10px] uppercase tracking-[0.25em] text-gold/80">Follow Us</p>
-            <div className="mt-4 flex justify-center gap-4">
-              {socials.map((s, i) => (
-                <motion.a
-                  key={i}
-                  href={s.href || "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  whileHover={{ y: -3 }}
-                  transition={{ duration: 0.25 }}
-                  className="flex h-12 w-12 items-center justify-center rounded-full border border-gold/20 text-gold/80 transition-colors duration-300 hover:border-gold hover:bg-gold/10 hover:text-gold"
-                >
-                  <s.Icon className="h-5 w-5" />
-                </motion.a>
-              ))}
-            </div>
+          {/* Luxury Instagram Showcase Pill Card */}
+          <div className="mt-16 flex flex-col items-center">
+            <p className="font-sans text-[10px] uppercase tracking-[0.3em] text-gold/80 mb-4">Follow Our Journey</p>
+            <motion.a
+              href={instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ y: -4, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.25 }}
+              className="group relative flex items-center gap-4 rounded-full border border-gold/35 bg-gradient-to-r from-card via-card/90 to-gold/[0.1] px-7 py-3.5 shadow-2xl transition-all duration-300 hover:border-gold hover:shadow-[0_8px_30px_rgba(212,175,55,0.22)]"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-amber-600 via-rose-600 to-purple-600 p-[1.5px] text-white shadow-md">
+                <div className="flex h-full w-full items-center justify-center rounded-full bg-black/80 transition-colors group-hover:bg-transparent">
+                  <Instagram className="h-5 w-5 text-gold group-hover:text-white transition-colors" />
+                </div>
+              </div>
+
+              <div className="text-left">
+                <span className="block font-[family-name:var(--font-playfair)] text-base font-semibold tracking-wide text-foreground group-hover:text-gold transition-colors">
+                  @blackorchid_annanagar
+                </span>
+                <span className="block font-sans text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                  Instagram • Official Handle
+                </span>
+              </div>
+
+              <div className="ml-2 flex h-8 w-8 items-center justify-center rounded-full border border-gold/20 text-gold transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:border-gold group-hover:bg-gold group-hover:text-black">
+                <ArrowUpRight className="h-4 w-4" />
+              </div>
+            </motion.a>
           </div>
         </div>
       </section>

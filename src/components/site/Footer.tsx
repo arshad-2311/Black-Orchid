@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Instagram, Facebook, Twitter, MapPin, Phone, Mail, Clock, ArrowUpRight, Send } from "lucide-react";
+import { Instagram, MapPin, Phone, Mail, Clock, ArrowUpRight, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useApp, type ViewKey } from "@/lib/store";
 import type { SiteSettings } from "@/lib/types";
@@ -22,12 +22,6 @@ export function Footer({ settings }: { settings: SiteSettings | null }) {
     { label: "Hours", view: "hours" },
     { label: "Reserve", view: "reservation" },
     { label: "Contact", view: "contact" },
-  ];
-
-  const socials = [
-    { Icon: Instagram, href: settings?.instagram },
-    { Icon: Facebook, href: settings?.facebook },
-    { Icon: Twitter, href: settings?.twitter },
   ];
 
   return (
@@ -67,7 +61,7 @@ export function Footer({ settings }: { settings: SiteSettings | null }) {
 
         {/* Main footer grid */}
         <div className="grid gap-12 py-16 md:grid-cols-4">
-          {/* Brand + socials */}
+          {/* Brand + Instagram */}
           <div className="md:col-span-1">
             <h4 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground">
               {settings?.restaurantName || "Black Orchid"}
@@ -75,17 +69,19 @@ export function Footer({ settings }: { settings: SiteSettings | null }) {
             <p className="mt-3 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">
               {settings?.tagline || "Fine Dining & Banquet"}
             </p>
-            <div className="mt-6 flex gap-3">
-              {socials.map(({ Icon, href }, i) => (
-                <motion.a
-                  key={i} href={href || "#"} target="_blank" rel="noopener noreferrer"
-                  whileHover={{ y: -3 }}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 text-foreground/70 transition-colors hover:border-gold/50 hover:text-gold"
-                  aria-label="Social media"
-                >
-                  <Icon className="h-4 w-4" />
-                </motion.a>
-              ))}
+            <div className="mt-6">
+              <a
+                href={settings?.instagram || "https://www.instagram.com/blackorchid_annanagar/?hl=en"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center gap-3 rounded-full border border-gold/30 bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-foreground transition-all duration-300 hover:border-gold hover:bg-gold/10 hover:text-gold"
+              >
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-amber-600 via-rose-600 to-purple-600 p-[1px] text-white">
+                  <Instagram className="h-3.5 w-3.5" />
+                </div>
+                <span className="font-sans tracking-wide">@blackorchid_annanagar</span>
+                <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-gold" />
+              </a>
             </div>
           </div>
 
