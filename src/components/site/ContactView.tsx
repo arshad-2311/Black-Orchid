@@ -9,11 +9,58 @@ import type { SiteSettings } from "@/lib/types";
 
 export function ContactView({ settings }: { settings: SiteSettings | null }) {
   const info = [
-    { Icon: MapPin, label: "Address", value: settings?.address || "G Block, L33, 1st Avenue, R.V. Nagar, Brindhavan Colony, VOC Nagar, Anna Nagar East, Chennai, Tamil Nadu – 600102", href: undefined as string | undefined },
-    { Icon: Phone, label: "Primary Contact", value: settings?.phone || "+91 95850 18502", href: `tel:${(settings?.phone || "+919585018502").replace(/\s+/g, "")}` },
-    ...(settings?.phoneSecondary ? [{ Icon: Phone, label: "Secondary Contact", value: settings.phoneSecondary, href: `tel:${settings.phoneSecondary.replace(/\s+/g, "")}` }] : []),
-    { Icon: Mail, label: "Email", value: settings?.email || "boan.reservations@gmail.com", href: `mailto:${settings?.email || "boan.reservations@gmail.com"}` },
-    { Icon: Clock, label: "Opening Hours", value: `Monday – Sunday: ${settings?.hoursWeekday || "11:00 AM – 11:00 PM"}`, href: undefined },
+    {
+      Icon: MapPin,
+      label: "Address",
+      content: (
+        <p className="mt-1 font-[family-name:var(--font-cormorant)] text-2xl text-foreground sm:text-3xl max-w-lg mx-auto leading-snug">
+          {settings?.address || "G Block, L33, 1st Avenue, R.V. Nagar, Brindhavan Colony, VOC Nagar, Anna Nagar East, Chennai, Tamil Nadu – 600102"}
+        </p>
+      ),
+    },
+    {
+      Icon: Phone,
+      label: settings?.phoneSecondary ? "Phone Contacts" : "Phone",
+      content: (
+        <div className="mt-1 flex flex-wrap items-center justify-center gap-x-6 gap-y-1">
+          <a
+            href={`tel:${(settings?.phone || "+919585018502").replace(/\s+/g, "")}`}
+            className="font-[family-name:var(--font-cormorant)] text-2xl text-foreground transition-colors hover:text-gold sm:text-3xl"
+          >
+            {settings?.phone || "+91 95850 18502"}
+          </a>
+          {settings?.phoneSecondary && (
+            <a
+              href={`tel:${settings.phoneSecondary.replace(/\s+/g, "")}`}
+              className="font-[family-name:var(--font-cormorant)] text-2xl text-foreground transition-colors hover:text-gold sm:text-3xl"
+            >
+              {settings.phoneSecondary}
+            </a>
+          )}
+        </div>
+      ),
+    },
+    {
+      Icon: Mail,
+      label: "Email",
+      content: (
+        <a
+          href={`mailto:${settings?.email || "boan.reservations@gmail.com"}`}
+          className="mt-1 block font-[family-name:var(--font-cormorant)] text-2xl text-foreground transition-colors hover:text-gold sm:text-3xl"
+        >
+          {settings?.email || "boan.reservations@gmail.com"}
+        </a>
+      ),
+    },
+    {
+      Icon: Clock,
+      label: "Opening Hours",
+      content: (
+        <p className="mt-1 font-[family-name:var(--font-cormorant)] text-2xl text-foreground sm:text-3xl">
+          Monday – Sunday: {settings?.hoursWeekday || "11:00 AM – 11:00 PM"}
+        </p>
+      ),
+    },
   ];
 
   const socials = [
@@ -74,7 +121,7 @@ export function ContactView({ settings }: { settings: SiteSettings | null }) {
             Reach us directly by phone, email, or visit our restobar in Anna Nagar East.
           </p>
 
-          <RevealGroup className="mt-12 space-y-8">
+          <RevealGroup className="mt-12 space-y-7">
             {info.map((it) => (
               <RevealItem key={it.label}>
                 <div className="flex flex-col items-center justify-center text-center">
@@ -82,13 +129,7 @@ export function ContactView({ settings }: { settings: SiteSettings | null }) {
                     <it.Icon className="h-5 w-5" />
                   </div>
                   <p className="font-sans text-[10px] uppercase tracking-[0.25em] text-gold/80">{it.label}</p>
-                  {it.href ? (
-                    <a href={it.href} className="mt-1 block font-[family-name:var(--font-cormorant)] text-2xl text-foreground transition-colors hover:text-gold sm:text-3xl">
-                      {it.value}
-                    </a>
-                  ) : (
-                    <p className="mt-1 font-[family-name:var(--font-cormorant)] text-2xl text-foreground sm:text-3xl">{it.value}</p>
-                  )}
+                  {it.content}
                 </div>
               </RevealItem>
             ))}
