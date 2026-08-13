@@ -9,7 +9,6 @@ import type { MenuCategory, MenuItem } from "@/lib/types";
 import { Eyebrow, OrnamentDivider, SpiceLevel, VegBadge } from "./primitives";
 import { RevealText } from "./motion";
 import { DishShowcase } from "./DishShowcase";
-import { OptionWheel } from "./OptionWheel";
 import { cn } from "@/lib/utils";
 
 type Group = { category: MenuCategory; items: MenuItem[] };
@@ -25,11 +24,24 @@ export function MenuView() {
   const scrollCategory = (dir: "left" | "right") => {
     if (categoryScrollRef.current) {
       categoryScrollRef.current.scrollBy({
-        left: dir === "left" ? -280 : 280,
+        left: dir === "left" ? -180 : 180,
         behavior: "smooth",
       });
     }
   };
+
+  // Auto-scroll the active category pill into view within the horizontal rail
+  useEffect(() => {
+    if (!categoryScrollRef.current) return;
+    const container = categoryScrollRef.current;
+    const activeEl = container.querySelector('[data-active="true"]') as HTMLElement | null;
+    if (activeEl) {
+      const containerRect = container.getBoundingClientRect();
+      const elRect = activeEl.getBoundingClientRect();
+      const offset = elRect.left - containerRect.left - containerRect.width / 2 + elRect.width / 2;
+      container.scrollBy({ left: offset, behavior: "smooth" });
+    }
+  }, [active]);
 
   useEffect(() => {
     apiGet<MenuCategory[]>("/api/menu").then(setCategories).catch(() => {});
@@ -93,84 +105,77 @@ export function MenuView() {
         </div>
       </section>
 
-      {/* ============== STICKY CONTROLS — desktop pills + mobile OptionWheel ============== */}
+      {/* ============== STICKY CONTROLS — horizontal pill rail for all sizes ============== */}
       <section className="sticky top-16 z-30 glass-cinema border-y border-white/[0.06]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          {/* Mobile: OptionWheel for category selection */}
-          <div className="py-3 lg:hidden">
-            <OptionWheel
-              options={[{ value: "ALL", label: "All" }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
-              value={active}
-              onChange={(v) => setActive(v)}
-            />
-          </div>
-          {/* Desktop: category pills with left/right direction buttons */}
-          <div className="hidden py-4 lg:flex lg:items-center lg:justify-between lg:gap-6">
-            <div className="relative flex items-center gap-1.5 min-w-0 flex-1">
-              <button
-                type="button"
-                onClick={() => scrollCategory("left")}
-                aria-label="Previous categories"
-                title="Previous categories"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-card/80 text-foreground transition-all duration-200 hover:border-gold/50 hover:text-gold hover:bg-gold/10"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
+          {/* Category pills with left/right arrows — works on both mobile and desktop */}
+          <div className="flex items-center gap-1.5 py-3 lg:py-4">
+            <button
+              type="button"
+              onClick={() => scrollCategory("left")}
+              aria-label="Previous categories"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-card/80 text-foreground transition-all duration-200 hover:border-gold/50 hover:text-gold hover:bg-gold/10 active:scale-90"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
 
-              <div ref={categoryScrollRef} className="no-scrollbar flex items-center gap-1 overflow-x-auto scroll-smooth px-1 py-1">
-                <CategoryPill active={active === "ALL"} onClick={() => setActive("ALL")}>
-                  All
+            <div
+              ref={categoryScrollRef}
+              className="no-scrollbar flex flex-1 items-center gap-1 overflow-x-auto scroll-smooth px-1 py-1"
+              style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x" }}
+            >
+              <CategoryPill active={active === "ALL"} onClick={() => setActive("ALL")}>
+                All
+              </CategoryPill>
+              {categories.map((c) => (
+                <CategoryPill key={c.id} active={active === c.id} onClick={() => setActive(c.id)}>
+                  {c.name}
                 </CategoryPill>
-                {categories.map((c) => (
-                  <CategoryPill key={c.id} active={active === c.id} onClick={() => setActive(c.id)}>
-                    {c.name}
-                  </CategoryPill>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => scrollCategory("right")}
-                aria-label="Next categories"
-                title="Next categories"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-card/80 text-foreground transition-all duration-200 hover:border-gold/50 hover:text-gold hover:bg-gold/10"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
+              ))}
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1 lg:w-64 lg:flex-none">
-                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search dishes…"
-                  className="h-11 w-full rounded-full border border-white/10 bg-card/60 pl-10 pr-9 text-sm text-foreground placeholder:text-muted-foreground/60 transition-colors focus:border-gold/50 focus:outline-none lg:w-64"
-                />
-                {query && (
-                  <button
-                    onClick={() => setQuery("")}
-                    aria-label="Clear search"
-                    className="absolute right-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center text-muted-foreground transition-colors hover:text-gold"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-              <button
-                onClick={() => setVegOnly((v) => !v)}
-                aria-pressed={vegOnly}
-                className={cn(
-                  "flex h-11 min-h-[44px] items-center gap-2 rounded-full border px-4 font-sans text-xs font-medium uppercase tracking-[0.2em] transition-all duration-300",
-                  vegOnly
-                    ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
-                    : "border-white/10 text-muted-foreground hover:border-gold/40 hover:text-gold"
-                )}
-              >
-                <Leaf className="h-3.5 w-3.5" /> Veg
-              </button>
+            <button
+              type="button"
+              onClick={() => scrollCategory("right")}
+              aria-label="Next categories"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-card/80 text-foreground transition-all duration-200 hover:border-gold/50 hover:text-gold hover:bg-gold/10 active:scale-90"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Search + veg filter row */}
+          <div className="flex items-center gap-3 border-t border-white/[0.04] py-3 lg:border-t-0 lg:py-0 lg:pb-4">
+            <div className="relative flex-1 lg:w-64 lg:flex-none">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search dishes…"
+                className="h-11 w-full rounded-full border border-white/10 bg-card/60 pl-10 pr-9 text-base text-foreground placeholder:text-muted-foreground/60 transition-colors focus:border-gold/50 focus:outline-none lg:text-sm"
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery("")}
+                  aria-label="Clear search"
+                  className="absolute right-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center text-muted-foreground transition-colors hover:text-gold"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
+            <button
+              onClick={() => setVegOnly((v) => !v)}
+              aria-pressed={vegOnly}
+              className={cn(
+                "flex h-11 min-h-[44px] items-center gap-2 rounded-full border px-4 font-sans text-xs font-medium uppercase tracking-[0.2em] transition-all duration-300",
+                vegOnly
+                  ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+                  : "border-white/10 text-muted-foreground hover:border-gold/40 hover:text-gold"
+              )}
+            >
+              <Leaf className="h-3.5 w-3.5" /> Veg
+            </button>
           </div>
         </div>
       </section>
@@ -361,6 +366,7 @@ function CategoryPill({
   return (
     <button
       onClick={onClick}
+      data-active={active}
       className={cn(
         "relative flex min-h-[44px] items-center whitespace-nowrap rounded-full px-5 font-sans text-xs font-medium uppercase tracking-[0.2em] transition-colors duration-300",
         active ? "text-black" : "text-muted-foreground hover:text-gold"
