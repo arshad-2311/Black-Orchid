@@ -11,11 +11,9 @@ let isSeeding = false;
 export async function ensureSeeded() {
   if (isSeeding) return;
   try {
-    const adminCount = await db.adminUser.count().catch(() => 0);
-    const menuCount = await db.menuItem.count().catch(() => 0);
-
-    if (adminCount > 0 && menuCount > 0) {
-      return; // Already populated
+    const existingSettings = await db.siteSettings.findUnique({ where: { id: "singleton" } }).catch(() => null);
+    if (existingSettings) {
+      return; // Database has already been seeded. Preserve all admin modifications and deletions!
     }
 
     isSeeding = true;
@@ -118,6 +116,7 @@ export async function ensureSeeded() {
       { name: "Black Orchid Martini", tagline: "The house signature", desc: "London Dry gin shaken with blackberry, elderflower, and lime, strained into a chilled coupe and finished with a flake of edible gold.", shortDesc: "Gin, blackberry, elderflower, edible gold", price: 18, image: IMAGES.drinks[0], images: [IMAGES.drinks[0], IMAGES.drinks[3]], cat: "cocktails", veg: true, spice: 0, featured: true, chef: true, ingredients: ["London Dry gin", "Blackberry", "Elderflower", "Lime", "Edible gold"], allergens: [], serving: "120ml coupe" },
     ];
 
+    const menuCount = await db.menuItem.count().catch(() => 0);
     if (menuCount === 0) {
       for (let i = 0; i < items.length; i++) {
         const it = items[i];
