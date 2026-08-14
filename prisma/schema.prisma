@@ -1,12 +1,13 @@
-// Prisma schema for Black Orchid luxury restaurant + CMS
+// Prisma schema for Black Orchid luxury restaurant + CMS (Supabase PostgreSQL)
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model AdminUser {
@@ -33,12 +34,12 @@ model MenuItem {
   id              String       @id @default(cuid())
   name            String
   tagline         String?
-  description     String
+  description     String       @db.Text
   shortDescription String?
   price           Float?
-  variants        String       @default("[]") // JSON string of DishVariant[]
+  variants        String       @default("[]") @db.Text // JSON string of DishVariant[]
   image           String?
-  images          String       @default("[]") // JSON array of URLs
+  images          String       @default("[]") @db.Text // JSON array of URLs
   categoryId      String
   category        MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   available       Boolean      @default(true)
@@ -47,11 +48,11 @@ model MenuItem {
   spice           Int          @default(0) // 0-3
   featured        Boolean      @default(false)
   chefRecommended Boolean      @default(false)
-  ingredients     String       @default("[]") // JSON array of strings
-  allergens       String       @default("[]") // JSON array of strings
+  ingredients     String       @default("[]") @db.Text // JSON array of strings
+  allergens       String       @default("[]") @db.Text // JSON array of strings
   servingSize     String?
   winePairing     String?
-  tastingNotes    String?
+  tastingNotes    String?      @db.Text
   pairingPrice    Float?
   order           Int          @default(0)
   createdAt       DateTime     @default(now())
@@ -62,7 +63,7 @@ model GalleryImage {
   id        String   @id @default(cuid())
   title     String
   url       String
-  caption   String?
+  caption   String?  @db.Text
   category  String   @default("Interior") // Food | Drinks | Interior | Events | Banquet
   order     Int      @default(0)
   createdAt DateTime @default(now())
@@ -79,7 +80,7 @@ model Reservation {
   time          String
   guests        Int
   kids          Int      @default(0)
-  special       String?
+  special       String?  @db.Text
   status        String   @default("PENDING") // PENDING | CONFIRMED | CANCELLED | COMPLETED
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -92,7 +93,7 @@ model NotificationLog {
   recipient        String
   status           String    // PENDING | SENT | FAILED
   provider         String?   // SMTP | TWILIO | FAST2SMS | LOG
-  error            String?
+  error            String?   @db.Text
   retryCount       Int       @default(0)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -107,7 +108,7 @@ model Testimonial {
   role      String?
   photo     String?
   rating    Int      @default(5)
-  message   String
+  message   String   @db.Text
   featured  Boolean  @default(false)
   order     Int      @default(0)
   createdAt DateTime @default(now())
@@ -117,7 +118,7 @@ model Testimonial {
 model EventItem {
   id          String   @id @default(cuid())
   title       String
-  description String
+  description String   @db.Text
   date        String
   image       String?
   published   Boolean  @default(true)
@@ -128,11 +129,11 @@ model EventItem {
 model CateringPackage {
   id          String   @id @default(cuid())
   name        String
-  description String
+  description String   @db.Text
   price       Float
   image       String?
   guests      String
-  features    String
+  features    String   @db.Text
   order       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -145,7 +146,7 @@ model SiteSettings {
   heroTitle           String   @default("An Exquisite Symphony of Flavour")
   heroSubtitle        String   @default("Where culinary artistry meets timeless elegance")
   aboutTitle          String   @default("Our Story")
-  aboutBody           String
+  aboutBody           String   @db.Text
   phone               String   @default("+91 95850 18502")
   phoneSecondary       String?  @default("+91 91764 77647")
   email               String   @default("boan.reservations@gmail.com")
@@ -153,17 +154,17 @@ model SiteSettings {
   smsSenderName       String   @default("Black Orchid Anna Nagar")
   notificationsEnabled Boolean  @default(true)
   address             String   @default("G Block, L33, 1st Avenue, R.V. Nagar, Brindhavan Colony, VOC Nagar, Anna Nagar East, Chennai, Tamil Nadu – 600102")
-  mapEmbed            String?  @default("https://maps.google.com/?q=Black+Orchid+Anna+Nagar+East+Chennai")
+  mapEmbed            String?  @db.Text
   hoursWeekday        String   @default("11:00 AM – 11:00 PM")
   hoursWeekend        String   @default("11:00 AM – 11:00 PM")
-  instagram           String   @default("")
+  instagram           String   @default("https://www.instagram.com/blackorchid_annanagar/?hl=en")
   facebook            String   @default("https://www.facebook.com/blackorchidchennai/")
   twitter             String   @default("")
   whatsapp            String   @default("+919585018502")
   banquetCapacity     String   @default("Up to 300 guests")
-  banquetDesc         String
-  metaTitle           String   @default("Black Orchid — Fine Dining & Banquet")
-  metaDesc            String
+  banquetDesc         String   @db.Text
+  metaTitle           String   @default("Black Orchid — Restobar & Fine Dining | Anna Nagar East, Chennai")
+  metaDesc            String   @db.Text
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }

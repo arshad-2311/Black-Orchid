@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
+import { createClient } from "@supabase/supabase-js";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
 
@@ -59,24 +60,59 @@ export async function POST(req: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const inputBuffer = Buffer.from(arrayBuffer);
 
-    // 5. Process image with Sharp: auto-rotate, resize to max 1200px, compress to WebP
+    // 5. Process image with Sharp: auto-rotate, resize to max 1600px, compress to WebP
     const processedBuffer = await sharp(inputBuffer)
       .rotate() // Respect EXIF orientation
-      .resize(1200, 1200, { fit: "inside", withoutEnlargement: true })
-      .webp({ quality: 80 })
+      .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 82 })
       .toBuffer();
 
-    // 6. Ensure public/uploads directory exists
-    await fs.mkdir(UPLOAD_DIR, { recursive: true });
-
-    // 7. Save file with unique filename
     const filename = `${randomUUID()}.webp`;
-    const filePath = path.join(UPLOAD_DIR, filename);
-    await fs.writeFile(filePath, processedBuffer);
 
-    // 8. Return relative URL path
-    const url = `/uploads/${filename}`;
-    return NextResponse.json({ url }, { status: 201 });
+    // 6. If Supabase Storage is configured, upload to Supabase bucket
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (supabaseUrl && supabaseKey) {
+      try {
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        const bucket = "restaurant-assets";
+
+        const { error: uploadError } = await supabase.storage
+          .from(bucket)
+          .upload(filename, processedBuffer, {
+            contentType: "image/webp",
+            cacheControl: "31536000",
+            upsert: true,
+          });
+
+        if (!uploadError) {
+          const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(filename);
+          if (publicData?.publicUrl) {
+            return NextResponse.json({ url: publicData.publicUrl }, { status: 201 });
+          }
+        } else {
+          console.warn("Supabase bucket upload notice:", uploadError.message);
+        }
+      } catch (sbErr) {
+        console.warn("Supabase storage client exception:", sbErr);
+      }
+    }
+
+    // 7. Fallback: save to local public/uploads directory
+    try {
+      await fs.mkdir(UPLOAD_DIR, { recursive: true });
+      const filePath = path.join(UPLOAD_DIR, filename);
+      await fs.writeFile(filePath, processedBuffer);
+      const url = `/uploads/${filename}`;
+      return NextResponse.json({ url }, { status: 201 });
+    } catch (fsErr) {
+      console.error("Local disk upload write error:", fsErr);
+      return NextResponse.json(
+        { error: "Failed to store image on disk" },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error("Image upload error:", error);
     return NextResponse.json(
