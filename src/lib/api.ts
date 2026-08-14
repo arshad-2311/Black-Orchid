@@ -1,7 +1,16 @@
-// Client-side API helpers with admin token injection
+// Client-side API helpers with admin token injection & resilient client sync
 "use client";
 
 import { useApp } from "./store";
+import {
+  reconcileEvents,
+  recordDeletedEvent,
+  recordCreatedEvent,
+  recordUpdatedEvent,
+  recordDeletedItem,
+  reconcileItems,
+} from "./sync";
+import type { EventItem } from "./types";
 
 async function authHeaders(): Promise<HeadersInit> {
   const token = useApp.getState().adminToken;
@@ -29,7 +38,26 @@ export async function apiGet<T = unknown>(path: string): Promise<T> {
     handleAuthError(res.status);
     throw new Error(`GET ${path} failed`);
   }
-  return res.json();
+  const data = await res.json();
+
+  // Automatic client reconciliation
+  if (path.startsWith("/api/events")) {
+    return reconcileEvents(data as EventItem[]) as unknown as T;
+  }
+  if (path.startsWith("/api/menu")) {
+    return reconcileItems("menu", data) as unknown as T;
+  }
+  if (path.startsWith("/api/gallery")) {
+    return reconcileItems("gallery", data) as unknown as T;
+  }
+  if (path.startsWith("/api/catering")) {
+    return reconcileItems("catering", data) as unknown as T;
+  }
+  if (path.startsWith("/api/testimonials")) {
+    return reconcileItems("testimonials", data) as unknown as T;
+  }
+
+  return data as T;
 }
 
 export async function apiPost<T = unknown>(path: string, body: unknown): Promise<T> {
@@ -44,6 +72,15 @@ export async function apiPost<T = unknown>(path: string, body: unknown): Promise
     handleAuthError(res.status);
     throw new Error((data as { error?: string }).error || `POST ${path} failed`);
   }
+
+  // Record creation in sync registry
+  if (path.startsWith("/api/events")) {
+    const createdEvent = (data as { event?: EventItem; id?: string }).event || (data as EventItem);
+    if (createdEvent && createdEvent.id) {
+      recordCreatedEvent(createdEvent);
+    }
+  }
+
   return data as T;
 }
 
@@ -59,6 +96,15 @@ export async function apiPatch<T = unknown>(path: string, body: unknown): Promis
     handleAuthError(res.status);
     throw new Error((data as { error?: string }).error || `PATCH ${path} failed`);
   }
+
+  // Record update in sync registry
+  if (path.startsWith("/api/events/")) {
+    const id = path.split("/").pop();
+    if (id) {
+      recordUpdatedEvent(id, body as Partial<EventItem>);
+    }
+  }
+
   return data as T;
 }
 
@@ -78,6 +124,24 @@ export async function apiPut<T = unknown>(path: string, body: unknown): Promise<
 }
 
 export async function apiDelete(path: string): Promise<void> {
+  // Extract ID and type for sync tracking
+  if (path.startsWith("/api/events/")) {
+    const id = path.split("/").pop();
+    if (id) recordDeletedEvent(id);
+  } else if (path.startsWith("/api/menu/")) {
+    const id = path.split("/").pop();
+    if (id) recordDeletedItem("menu", id);
+  } else if (path.startsWith("/api/gallery/")) {
+    const id = path.split("/").pop();
+    if (id) recordDeletedItem("gallery", id);
+  } else if (path.startsWith("/api/catering/")) {
+    const id = path.split("/").pop();
+    if (id) recordDeletedItem("catering", id);
+  } else if (path.startsWith("/api/testimonials/")) {
+    const id = path.split("/").pop();
+    if (id) recordDeletedItem("testimonials", id);
+  }
+
   const res = await fetch(path, {
     method: "DELETE",
     headers: await authHeaders(),
