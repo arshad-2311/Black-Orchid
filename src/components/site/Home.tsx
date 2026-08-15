@@ -556,18 +556,28 @@ function GalleryPreview({ images, onViewAll }: { images: GalleryImage[]; onViewA
 
 /* ============== LIVE GOOGLE REVIEWS (Jotform Widget) ============== */
 function LiveGoogleReviews() {
-  const [iframeHeight, setIframeHeight] = useState(520);
+  const [iframeHeight, setIframeHeight] = useState(480);
+  const lastHeightRef = useRef(480);
 
   useEffect(() => {
+    let timeout: NodeJS.Timeout;
     const handleMessage = (e: MessageEvent) => {
       if (e.data && typeof e.data === "object" && e.data.type === "jf-widget-resize") {
-        if (e.data.height && Number(e.data.height) > 100) {
-          setIframeHeight(Math.max(400, Number(e.data.height)));
+        const newH = Number(e.data.height);
+        if (newH > 100 && Math.abs(newH - lastHeightRef.current) > 30) {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => {
+            lastHeightRef.current = newH;
+            setIframeHeight(Math.max(420, newH));
+          }, 150);
         }
       }
     };
     window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
+    return () => {
+      window.removeEventListener("message", handleMessage);
+      clearTimeout(timeout);
+    };
   }, []);
 
   const embedHtml = `<!DOCTYPE html>
@@ -579,7 +589,7 @@ function LiveGoogleReviews() {
       * { box-sizing: border-box; }
       body {
         margin: 0;
-        padding: 8px;
+        padding: 4px;
         background: transparent;
         color: #f4efe5;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -591,10 +601,12 @@ function LiveGoogleReviews() {
     <div id="JFWebsiteWidget-01a003efac50700080c40ef2fdeed59c2026"></div>
     <script src="https://www.jotform.com/website-widgets/embed/01a003efac50700080c40ef2fdeed59c2026"></script>
     <script>
+      let lastReported = 0;
       const ro = new ResizeObserver(() => {
         const h = document.body.scrollHeight;
-        if (h > 80) {
-          window.parent.postMessage({ type: 'jf-widget-resize', height: h + 24 }, '*');
+        if (h > 80 && Math.abs(h - lastReported) > 25) {
+          lastReported = h;
+          window.parent.postMessage({ type: 'jf-widget-resize', height: h + 16 }, '*');
         }
       });
       ro.observe(document.body);
@@ -623,7 +635,8 @@ function LiveGoogleReviews() {
           <iframe
             srcDoc={embedHtml}
             title="Google Reviews - Black Orchid"
-            className="w-full border-0 transition-all duration-300"
+            scrolling="no"
+            className="w-full border-0 transition-[height] duration-300"
             style={{ minHeight: `${iframeHeight}px`, height: `${iframeHeight}px` }}
             sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
           />

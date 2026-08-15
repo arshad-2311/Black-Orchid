@@ -136,7 +136,7 @@ export function CircularGallery({
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      {/* Scroll Container with Lenis isolation */}
+      {/* Horizontal Scroll Container — preserves smooth vertical page scrolling */}
       <div
         ref={scrollRef}
         onScroll={onScroll}
@@ -144,9 +144,6 @@ export function CircularGallery({
         onPointerMove={onPointerMove}
         onPointerUp={stopDragging}
         onPointerCancel={stopDragging}
-        data-lenis-prevent="true"
-        data-lenis-prevent-wheel="true"
-        data-lenis-prevent-touch="true"
         className={cn(
           "no-scrollbar flex gap-4 sm:gap-6 overflow-x-auto px-[10%] sm:px-[15%] lg:px-[20%] py-8 touch-pan-x cursor-grab active:cursor-grabbing",
           isPointerDragging && "cursor-grabbing"
@@ -154,6 +151,7 @@ export function CircularGallery({
         style={{
           scrollSnapType: "x mandatory",
           WebkitOverflowScrolling: "touch",
+          touchAction: "pan-y",
         }}
       >
         {items.map((img, i) => {
