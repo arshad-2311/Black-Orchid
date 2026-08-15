@@ -7,6 +7,7 @@ import type { SiteSettings } from "@/lib/types";
 import { PillNav } from "@/components/site/PillNav";
 import { Footer } from "@/components/site/Footer";
 import { ScrollProgress, StickyReserve } from "@/components/site/Chrome";
+import { WhatsAppButton } from "@/components/site/WhatsAppButton";
 import { Loader } from "@/components/site/Loader";
 import { MenuView } from "@/components/site/MenuView";
 import { useLenis, scrollToTop } from "@/components/site/premium-motion";
@@ -33,6 +34,7 @@ export default function MenuPage() {
         <MenuView />
       </div>
       <Footer settings={settings} />
+      <WhatsAppButton phone={settings?.whatsapp || "+91 95850 18502"} />
       <StickyReserve />
     </div>
   );
