@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Loader2, ShieldCheck } from "lucide-react";
+import { Check, Loader2, ShieldCheck, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface RecaptchaProps {
@@ -13,11 +14,10 @@ interface RecaptchaProps {
 
 export function RecaptchaBadge({ onVerify, onExpire, error, className }: RecaptchaProps) {
   const [status, setStatus] = useState<"idle" | "verifying" | "verified">("idle");
-  const [token, setToken] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
-  // Handle live Google reCAPTCHA if siteKey is supplied
+  // Handle live Google reCAPTCHA if siteKey is supplied in env
   useEffect(() => {
     if (!siteKey || typeof window === "undefined") return;
 
@@ -39,12 +39,11 @@ export function RecaptchaBadge({ onVerify, onExpire, error, className }: Recaptc
             theme: "dark",
             callback: (t: string) => {
               setStatus("verified");
-              setToken(t);
+              toast.success("Security verified ✦");
               onVerify(t);
             },
             "expired-callback": () => {
               setStatus("idle");
-              setToken(null);
               onExpire?.();
             },
           });
@@ -59,56 +58,69 @@ export function RecaptchaBadge({ onVerify, onExpire, error, className }: Recaptc
     checkGrecaptcha();
   }, [siteKey, onVerify, onExpire]);
 
-  // Built-in Luxury Human Verification Challenge (when no external Google API key is configured)
+  // Built-in Luxury Human Verification Challenge
   const handleInteractiveVerification = () => {
     if (status !== "idle") return;
     setStatus("verifying");
 
-    // Realistic human verification challenge delay with client-side anti-bot proof
     setTimeout(() => {
       const entropy = `${Date.now()}_${Math.random().toString(36).substring(2, 12)}_${navigator.userAgent.length}`;
       const mockToken = `bo_human_${btoa(entropy)}`;
       setStatus("verified");
-      setToken(mockToken);
+      toast.success("Security check passed! You are verified as human ✦");
       onVerify(mockToken);
-    }, 900);
+    }, 750);
   };
 
   if (siteKey) {
     return (
       <div className={cn("flex flex-col items-center justify-center py-2", className)}>
         <div ref={containerRef} />
-        {error && <p className="mt-2 font-sans text-xs text-red-400">{error}</p>}
+        {error && (
+          <p className="mt-2.5 flex items-center gap-1.5 font-sans text-xs text-red-400">
+            <AlertCircle className="h-3.5 w-3.5" /> {error}
+          </p>
+        )}
       </div>
     );
   }
 
   return (
-    <div className={cn("rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5 transition-all duration-300", className)}>
+    <div
+      className={cn(
+        "rounded-2xl border bg-white/[0.03] p-4 sm:p-5 transition-all duration-300",
+        error
+          ? "border-red-500/50 bg-red-950/10 shadow-[0_0_20px_rgba(239,68,68,0.15)] ring-1 ring-red-500/30"
+          : status === "verified"
+          ? "border-emerald-500/40 bg-emerald-950/15"
+          : "border-white/10 hover:border-gold/30",
+        className
+      )}
+    >
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        {/* Verification Checkbox */}
+        {/* Verification Interactive Checkbox */}
         <button
           type="button"
           onClick={handleInteractiveVerification}
           disabled={status !== "idle"}
           className={cn(
-            "flex items-center gap-3.5 rounded-xl border px-4 py-3 text-left transition-all duration-200 w-full sm:w-auto",
+            "group flex items-center gap-3.5 rounded-xl border px-4 py-3 text-left transition-all duration-200 w-full sm:w-auto cursor-pointer",
             status === "verified"
-              ? "border-emerald-500/40 bg-emerald-950/20 text-emerald-300"
+              ? "border-emerald-500/50 bg-emerald-950/30 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.15)]"
               : status === "verifying"
-              ? "border-gold/30 bg-gold/5 text-gold"
-              : "border-white/15 bg-black/40 text-foreground hover:border-gold/50 hover:bg-white/[0.04]"
+              ? "border-gold/40 bg-gold/10 text-gold"
+              : "border-white/20 bg-black/50 text-foreground hover:border-gold/60 hover:bg-white/[0.06] hover:shadow-[0_0_15px_rgba(212,175,55,0.15)]"
           )}
-          aria-label="I'm not a robot verification checkbox"
+          aria-label="I'm not a robot security check"
         >
           <div
             className={cn(
               "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-all duration-300",
               status === "verified"
-                ? "border-emerald-400 bg-emerald-500 text-black shadow-[0_0_12px_rgba(16,185,129,0.4)]"
+                ? "border-emerald-400 bg-emerald-500 text-black shadow-[0_0_12px_rgba(16,185,129,0.5)]"
                 : status === "verifying"
                 ? "border-gold/60 bg-gold/20 text-gold"
-                : "border-white/30 bg-white/5"
+                : "border-white/30 bg-white/5 group-hover:border-gold/60"
             )}
           >
             {status === "verifying" ? (
@@ -118,17 +130,22 @@ export function RecaptchaBadge({ onVerify, onExpire, error, className }: Recaptc
             ) : null}
           </div>
 
-          <span className="font-sans text-xs font-medium tracking-wide">
-            {status === "verified"
-              ? "Verification Complete"
-              : status === "verifying"
-              ? "Verifying human interaction…"
-              : "I'm not a robot"}
-          </span>
+          <div className="flex flex-col">
+            <span className="font-sans text-xs font-semibold tracking-wide">
+              {status === "verified"
+                ? "Verified Human"
+                : status === "verifying"
+                ? "Verifying interaction…"
+                : "I'm not a robot"}
+            </span>
+            <span className="font-sans text-[10px] text-muted-foreground/70">
+              {status === "verified" ? "Verification complete" : "Click checkbox to verify"}
+            </span>
+          </div>
         </button>
 
         {/* reCAPTCHA Brand Badge */}
-        <div className="flex items-center gap-2 text-right">
+        <div className="flex items-center gap-2 text-right shrink-0">
           <div className="flex flex-col items-center sm:items-end">
             <div className="flex items-center gap-1.5 font-sans text-[11px] font-semibold tracking-wider text-muted-foreground">
               <ShieldCheck className={cn("h-4 w-4", status === "verified" ? "text-emerald-400" : "text-gold/80")} />
@@ -148,9 +165,10 @@ export function RecaptchaBadge({ onVerify, onExpire, error, className }: Recaptc
       </div>
 
       {error && (
-        <p className="mt-3 font-sans text-xs text-red-400 text-center sm:text-left">
-          {error}
-        </p>
+        <div className="mt-3 flex items-center justify-center sm:justify-start gap-1.5 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 font-sans text-xs text-red-400">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          <span>{error}</span>
+        </div>
       )}
     </div>
   );

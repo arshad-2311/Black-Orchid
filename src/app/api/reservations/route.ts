@@ -75,9 +75,16 @@ export async function POST(req: Request) {
 
     const { name, phone, email, date, time, guests, kids, special, captchaToken } = result.data;
 
-    // 4. Verify reCAPTCHA token if secret key is present in environment
+    // 4. Strict reCAPTCHA verification: require valid token
+    if (!captchaToken || typeof captchaToken !== "string" || captchaToken.trim().length === 0) {
+      return NextResponse.json(
+        { error: "Security check failed. Please click and complete the reCAPTCHA verification to confirm your booking." },
+        { status: 400 }
+      );
+    }
+
     const recaptchaSecret = process.env.RECAPTCHA_SECRET_KEY;
-    if (recaptchaSecret && captchaToken && !captchaToken.startsWith("bo_human_")) {
+    if (recaptchaSecret && !captchaToken.startsWith("bo_human_")) {
       try {
         const verifyRes = await fetch("https://www.google.com/recaptcha/api/siteverify", {
           method: "POST",

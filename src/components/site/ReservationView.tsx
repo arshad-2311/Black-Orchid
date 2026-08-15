@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, ArrowRight, Calendar, Check, Clock, Mail, Minus, Phone, Plus, Sparkles, User, QrCode, Printer,
+  ArrowLeft, ArrowRight, Calendar, Check, Clock, Mail, Minus, Phone, Plus, Sparkles, User, QrCode, Printer, ShieldCheck,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { Eyebrow, LuxuryButton, OrnamentDivider } from "./primitives";
@@ -118,7 +118,9 @@ export function ReservationView() {
 
   const submit = async () => {
     if (!captchaToken) {
-      setCaptchaError("Please complete the security verification before confirming.");
+      const msg = "Please click the 'I'm not a robot' reCAPTCHA box to verify before confirming.";
+      setCaptchaError(msg);
+      toast.error(msg);
       return;
     }
     setCaptchaError("");
@@ -276,8 +278,22 @@ export function ReservationView() {
                           <LuxuryButton variant="ghost" onClick={back} className="min-h-[52px]">
                             <ArrowLeft className="h-4 w-4" /> Back
                           </LuxuryButton>
-                          <LuxuryButton variant="solid" onClick={submit} disabled={loading} className="min-h-[52px] flex-1">
-                            {loading ? "Securing your table…" : <>Confirm Reservation <Sparkles className="h-4 w-4" /></>}
+                          <LuxuryButton
+                            variant={captchaToken ? "solid" : "outline"}
+                            onClick={submit}
+                            disabled={loading}
+                            className={cn(
+                              "min-h-[52px] flex-1 transition-all duration-300",
+                              !captchaToken && "border-gold/40 text-gold hover:bg-gold/10"
+                            )}
+                          >
+                            {loading ? (
+                              "Securing your table…"
+                            ) : !captchaToken ? (
+                              <>Verify reCAPTCHA to Confirm <ShieldCheck className="h-4 w-4" /></>
+                            ) : (
+                              <>Confirm Reservation <Sparkles className="h-4 w-4" /></>
+                            )}
                           </LuxuryButton>
                         </div>
                         <p className="mt-4 text-center font-sans text-[11px] text-muted-foreground/70">
