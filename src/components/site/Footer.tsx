@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Instagram, MapPin, Phone, Mail, Clock, ArrowUpRight, Send } from "lucide-react";
+import { Instagram, MapPin, Phone, Mail, ArrowUpRight, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useApp, type ViewKey } from "@/lib/store";
 import type { SiteSettings } from "@/lib/types";
@@ -12,6 +12,18 @@ export function Footer({ settings }: { settings: SiteSettings | null }) {
   const { setView } = useApp();
   const router = useRouter();
   const [email, setEmail] = useState("");
+
+  // Load Elfsight Google Maps platform script
+  useEffect(() => {
+    const scriptId = "elfsight-platform-script";
+    if (!document.getElementById(scriptId)) {
+      const script = document.createElement("script");
+      script.id = scriptId;
+      script.src = "https://elfsightcdn.com/platform.js";
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }, []);
 
   const links: { label: string; view: ViewKey }[] = [
     { label: "About", view: "about" },
@@ -45,22 +57,35 @@ export function Footer({ settings }: { settings: SiteSettings | null }) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.7, delay: 0.15 }}
-            onSubmit={(e) => { e.preventDefault(); if (email) { toast.success("Welcome to the inner circle ✦"); setEmail(""); } }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (email) {
+                toast.success("Welcome to the inner circle ✦");
+                setEmail("");
+              }
+            }}
             className="flex items-center gap-3"
           >
             <input
-              type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Your email address"
               className="h-14 flex-1 rounded-full border border-white/10 bg-white/[0.03] px-6 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-gold/50 focus:outline-none transition-colors"
             />
-            <button type="submit" className="ripple-container relative inline-flex h-14 items-center justify-center gap-2 overflow-hidden rounded-full bg-gold-gradient px-7 font-sans text-[11px] font-semibold uppercase tracking-[0.2em] text-black glow-gold-hover">
-              <Send className="relative z-10 h-4 w-4" /><span className="relative z-10 hidden sm:inline">Subscribe</span>
+            <button
+              type="submit"
+              className="ripple-container relative inline-flex h-14 items-center justify-center gap-2 overflow-hidden rounded-full bg-gold-gradient px-7 font-sans text-[11px] font-semibold uppercase tracking-[0.2em] text-black glow-gold-hover"
+            >
+              <Send className="relative z-10 h-4 w-4" />
+              <span className="relative z-10 hidden sm:inline">Subscribe</span>
             </button>
           </motion.form>
         </div>
 
         {/* Main footer grid */}
-        <div className="grid gap-12 py-16 md:grid-cols-4">
+        <div className="grid gap-10 py-16 md:grid-cols-4 items-start">
           {/* Brand + Instagram */}
           <div className="md:col-span-1">
             <h4 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground">
@@ -71,7 +96,11 @@ export function Footer({ settings }: { settings: SiteSettings | null }) {
             </p>
             <div className="mt-6">
               <a
-                href={(settings?.instagram && settings.instagram.includes("instagram.com")) ? settings.instagram : "https://www.instagram.com/blackorchid_annanagar/?hl=en"}
+                href={
+                  settings?.instagram && settings.instagram.includes("instagram.com")
+                    ? settings.instagram
+                    : "https://www.instagram.com/blackorchid_annanagar/?hl=en"
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group inline-flex items-center gap-3 rounded-full border border-gold/30 bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-foreground transition-all duration-300 hover:border-gold hover:bg-gold/10 hover:text-gold"
@@ -91,7 +120,10 @@ export function Footer({ settings }: { settings: SiteSettings | null }) {
             <ul className="mt-5 space-y-3">
               {links.map((l) => (
                 <li key={l.label}>
-                  <button onClick={() => setView(l.view)} className="group inline-flex items-center gap-1.5 font-[family-name:var(--font-cormorant)] text-lg text-muted-foreground transition-colors hover:text-gold">
+                  <button
+                    onClick={() => setView(l.view)}
+                    className="group inline-flex items-center gap-1.5 font-[family-name:var(--font-cormorant)] text-lg text-muted-foreground transition-colors hover:text-gold"
+                  >
                     {l.label}
                     <ArrowUpRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
                   </button>
@@ -104,21 +136,37 @@ export function Footer({ settings }: { settings: SiteSettings | null }) {
           <div>
             <p className="font-sans text-[10px] uppercase tracking-[0.3em] text-gold/70">Visit</p>
             <ul className="mt-5 space-y-4 text-sm text-muted-foreground">
-              <li className="flex gap-3"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><span>{settings?.address}</span></li>
+              <li className="flex gap-3">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" />
+                <span>{settings?.address || "G Block, L33, 1st Avenue, Anna Nagar East, Chennai – 600102"}</span>
+              </li>
               <li className="flex gap-3">
                 <Phone className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" />
-                <a href={`tel:${(settings?.phone || "+919585018502").replace(/\s+/g, "")}`} className="hover:text-gold transition-colors">{settings?.phone || "+91 95850 18502"}</a>
+                <a
+                  href={`tel:${(settings?.phone || "+919585018502").replace(/\s+/g, "")}`}
+                  className="hover:text-gold transition-colors"
+                >
+                  {settings?.phone || "+91 95850 18502"}
+                </a>
               </li>
-              <li className="flex gap-3"><Mail className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><a href={`mailto:${settings?.email || "boan.reservations@gmail.com"}`} className="hover:text-gold transition-colors">{settings?.email || "boan.reservations@gmail.com"}</a></li>
+              <li className="flex gap-3">
+                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" />
+                <a
+                  href={`mailto:${settings?.email || "boan.reservations@gmail.com"}`}
+                  className="hover:text-gold transition-colors"
+                >
+                  {settings?.email || "boan.reservations@gmail.com"}
+                </a>
+              </li>
             </ul>
           </div>
 
-          {/* Hours */}
-          <div>
-            <p className="font-sans text-[10px] uppercase tracking-[0.3em] text-gold/70">Hours</p>
-            <ul className="mt-5 space-y-4 text-sm text-muted-foreground">
-              <li className="flex gap-3"><Clock className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><div><p className="text-foreground">Monday – Sunday</p><p>{settings?.hoursWeekday || "11:00 AM – 11:00 PM"}</p></div></li>
-            </ul>
+          {/* Interactive Google Map (Right Side) */}
+          <div className="w-full">
+            <p className="font-sans text-[10px] uppercase tracking-[0.3em] text-gold/70">Location</p>
+            <div className="mt-4 w-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+              <div className="elfsight-app-75d749ce-0249-4683-b444-19098910896e" data-elfsight-app-lazy />
+            </div>
           </div>
         </div>
 
@@ -128,9 +176,15 @@ export function Footer({ settings }: { settings: SiteSettings | null }) {
             © {new Date().getFullYear()} {settings?.restaurantName || "Black Orchid"}. Crafted with intention.
           </p>
           <div className="flex gap-6">
-            <button onClick={() => setView("privacy")} className="font-sans text-xs text-muted-foreground transition-colors hover:text-gold">Privacy</button>
-            <button onClick={() => setView("terms")} className="font-sans text-xs text-muted-foreground transition-colors hover:text-gold">Terms</button>
-            <button onClick={() => router.push("/admin")} className="font-sans text-xs text-muted-foreground/40 transition-colors hover:text-gold">Admin</button>
+            <button onClick={() => setView("privacy")} className="font-sans text-xs text-muted-foreground transition-colors hover:text-gold">
+              Privacy
+            </button>
+            <button onClick={() => setView("terms")} className="font-sans text-xs text-muted-foreground transition-colors hover:text-gold">
+              Terms
+            </button>
+            <button onClick={() => router.push("/admin")} className="font-sans text-xs text-muted-foreground/40 transition-colors hover:text-gold">
+              Admin
+            </button>
           </div>
         </div>
       </div>
