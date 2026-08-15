@@ -212,24 +212,39 @@ export function ReservationView() {
                   <AnimatePresence mode="wait" custom={direction}>
                     {step === 0 && (
                       <motion.div key="step-0" custom={direction} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}>
-                        <StepDate form={form} errors={errors} update={update} today={today} />
-                        <div className="mt-8">
-                          <LuxuryButton variant="solid" onClick={next} className="w-full min-h-[52px]">
-                            Continue <ArrowRight className="h-4 w-4" />
-                          </LuxuryButton>
-                        </div>
+                        <StepDate
+                          form={form}
+                          errors={errors}
+                          today={today}
+                          onSelectDate={(val) => {
+                            update("date", val);
+                            setTimeout(() => {
+                              setDirection(1);
+                              setStep(1);
+                              scrollToWizard();
+                            }, 180);
+                          }}
+                        />
                       </motion.div>
                     )}
 
                     {step === 1 && (
                       <motion.div key="step-1" custom={direction} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}>
-                        <StepTime form={form} errors={errors} update={update} />
-                        <div className="mt-8 flex items-center gap-3">
+                        <StepTime
+                          form={form}
+                          errors={errors}
+                          onSelectTime={(val) => {
+                            update("time", val);
+                            setTimeout(() => {
+                              setDirection(1);
+                              setStep(2);
+                              scrollToWizard();
+                            }, 180);
+                          }}
+                        />
+                        <div className="mt-8 flex items-center">
                           <LuxuryButton variant="ghost" onClick={back} className="min-h-[52px]">
-                            <ArrowLeft className="h-4 w-4" /> Back
-                          </LuxuryButton>
-                          <LuxuryButton variant="solid" onClick={next} className="min-h-[52px] flex-1">
-                            Continue <ArrowRight className="h-4 w-4" />
+                            <ArrowLeft className="h-4 w-4" /> Back to Date
                           </LuxuryButton>
                         </div>
                       </motion.div>
@@ -385,18 +400,18 @@ function StepDot({ index, current }: { index: number; current: number }) {
    STEP 1 — DATE
    ========================================================= */
 function StepDate({
-  form, errors, update, today,
+  form, errors, today, onSelectDate,
 }: {
   form: FormState;
   errors: Record<string, string>;
-  update: (key: keyof FormState, value: string) => void;
   today: string;
+  onSelectDate: (val: string) => void;
 }) {
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground sm:text-4xl">Choose a Date</h2>
-        <p className="mt-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">Select the evening you wish to join us.</p>
+        <p className="mt-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">Select your desired dining date.</p>
       </div>
       <div className="pt-2">
         <label className="mb-2 block font-mono text-xs tracking-widest text-muted-foreground uppercase">
@@ -404,7 +419,7 @@ function StepDate({
         </label>
         <PremiumCalendar
           value={form.date}
-          onChange={(val) => update("date", val)}
+          onChange={(val) => onSelectDate(val)}
           minDate={today}
           error={errors.date}
         />
@@ -422,22 +437,22 @@ function StepDate({
    STEP 2 — TIME
    ========================================================= */
 function StepTime({
-  form, errors, update,
+  form, errors, onSelectTime,
 }: {
   form: FormState;
   errors: Record<string, string>;
-  update: (key: keyof FormState, value: string) => void;
+  onSelectTime: (val: string) => void;
 }) {
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground sm:text-4xl">Select a Time</h2>
-        <p className="mt-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">Open continuously from 11:00 AM to 11:00 PM.</p>
+        <p className="mt-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">Click a time slot to proceed to party size.</p>
       </div>
       <div className="space-y-5">
-        <TimeGroup title="Lunch Service (11:00 AM – 2:30 PM)" times={LUNCH_TIMES} selected={form.time} onSelect={(t) => update("time", t)} />
-        <TimeGroup title="Afternoon & Lounge (3:00 PM – 5:30 PM)" times={AFTERNOON_TIMES} selected={form.time} onSelect={(t) => update("time", t)} />
-        <TimeGroup title="Dinner Service (6:00 PM – 11:00 PM)" times={DINNER_TIMES} selected={form.time} onSelect={(t) => update("time", t)} />
+        <TimeGroup title="Lunch Service (11:00 AM – 2:30 PM)" times={LUNCH_TIMES} selected={form.time} onSelect={(t) => onSelectTime(t)} />
+        <TimeGroup title="Afternoon & Lounge (3:00 PM – 5:30 PM)" times={AFTERNOON_TIMES} selected={form.time} onSelect={(t) => onSelectTime(t)} />
+        <TimeGroup title="Dinner Service (6:00 PM – 11:00 PM)" times={DINNER_TIMES} selected={form.time} onSelect={(t) => onSelectTime(t)} />
       </div>
       {errors.time && (
         <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="font-sans text-xs text-red-400">
