@@ -15,6 +15,7 @@ import type { Reservation } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { PremiumCalendar } from "./PremiumCalendar";
 import { encodePassToken } from "@/lib/pass-token";
+import { RecaptchaBadge } from "./RecaptchaBadge";
 
 const STEPS = ["Date", "Time", "Guests", "Details", "Confirm"] as const;
 const LUNCH_TIMES = ["11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM"];
@@ -55,6 +56,8 @@ export function ReservationView() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaError, setCaptchaError] = useState<string>("");
   const [success, setSuccess] = useState<ReservationWithNotif | null>(null);
   const wizardRef = useRef<HTMLDivElement>(null);
 
@@ -114,6 +117,11 @@ export function ReservationView() {
   };
 
   const submit = async () => {
+    if (!captchaToken) {
+      setCaptchaError("Please complete the security verification before confirming.");
+      return;
+    }
+    setCaptchaError("");
     setLoading(true);
     try {
       const res = await apiPost<Reservation>("/api/reservations", {
@@ -125,6 +133,7 @@ export function ReservationView() {
         guests: Number(form.guests),
         kids: Number(form.kids || 0),
         special: form.special.trim(),
+        captchaToken,
       });
       setSuccess(res);
       toast.success("Reservation request received ✦");
@@ -254,7 +263,15 @@ export function ReservationView() {
 
                     {step === 4 && (
                       <motion.div key="step-4" custom={direction} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}>
-                        <StepConfirm form={form} update={update} />
+                        <StepConfirm
+                          form={form}
+                          update={update}
+                          onVerifyCaptcha={(t) => {
+                            setCaptchaToken(t);
+                            setCaptchaError("");
+                          }}
+                          captchaError={captchaError}
+                        />
                         <div className="mt-8 flex items-center gap-3">
                           <LuxuryButton variant="ghost" onClick={back} className="min-h-[52px]">
                             <ArrowLeft className="h-4 w-4" /> Back
@@ -508,16 +525,18 @@ function StepDetails({
    STEP 5 — CONFIRM (review + special requests)
    ========================================================= */
 function StepConfirm({
-  form, update,
+  form, update, onVerifyCaptcha, captchaError,
 }: {
   form: FormState;
   update: (key: keyof FormState, value: string) => void;
+  onVerifyCaptcha: (token: string) => void;
+  captchaError?: string;
 }) {
   return (
     <div className="space-y-7">
       <div>
         <h2 className="font-[family-name:var(--font-playfair)] text-3xl font-semibold text-foreground sm:text-4xl">Confirm Your Reservation</h2>
-        <p className="mt-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">Review the details and add any special requests.</p>
+        <p className="mt-2 font-[family-name:var(--font-cormorant)] text-lg italic text-muted-foreground">Review the details and complete the security verification.</p>
       </div>
       <SummaryCard form={form} />
       <div>
@@ -526,13 +545,21 @@ function StepConfirm({
         </label>
         <textarea
           id="r-special"
-          rows={4}
+          rows={3}
           value={form.special}
           onChange={(e) => update("special", e.target.value)}
           placeholder="Anniversary celebration, dietary requirements, seating preference…"
           className={cn(inputClass, "h-auto resize-none py-3.5")}
         />
         <p className="mt-2 font-sans text-[11px] text-muted-foreground/70">Optional — share anything that would make your evening more memorable.</p>
+      </div>
+
+      {/* reCAPTCHA Anti-Bot Security Verification */}
+      <div className="pt-2">
+        <label className="mb-2.5 block font-sans text-[10px] uppercase tracking-[0.25em] text-gold/80">
+          Security Verification
+        </label>
+        <RecaptchaBadge onVerify={onVerifyCaptcha} error={captchaError} />
       </div>
     </div>
   );

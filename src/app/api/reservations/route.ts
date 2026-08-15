@@ -24,6 +24,8 @@ const reservationSchema = z.object({
   guests: z.coerce.number().int("Guest count must be a whole number").min(1, "At least 1 guest required").max(20, "Maximum 20 guests per online booking"),
   kids: z.coerce.number().int("Kids count must be a whole number").min(0).max(10).optional().default(0),
   special: z.string().trim().max(500, "Special request text must not exceed 500 characters").optional().nullable(),
+  captchaToken: z.string().optional(),
+  botTrap: z.string().optional(),
 });
 
 // In-memory rate limiting map: IP -> array of timestamps
@@ -59,6 +61,11 @@ export async function POST(req: Request) {
     // 2. Parse request body
     const body = await req.json().catch(() => ({}));
 
+    // Honeypot check — bots fill in hidden fields
+    if (body.botTrap && String(body.botTrap).trim().length > 0) {
+      return NextResponse.json({ error: "Spam detected." }, { status: 400 });
+    }
+
     // 3. Validate with Zod schema
     const result = reservationSchema.safeParse(body);
     if (!result.success) {
@@ -66,7 +73,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: firstError, details: result.error.format() }, { status: 400 });
     }
 
-    const { name, phone, email, date, time, guests, kids, special } = result.data;
+    const { name, phone, email, date, time, guests, kids, special, captchaToken } = result.data;
+
+    // 4. Verify reCAPTCHA token if secret key is present in environment
+    const recaptchaSecret = process.env.RECAPTCHA_SECRET_KEY;
+    if (recaptchaSecret && captchaToken && !captchaToken.startsWith("bo_human_")) {
+      try {
+        const verifyRes = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `secret=${encodeURIComponent(recaptchaSecret)}&response=${encodeURIComponent(captchaToken)}`,
+        });
+        const verifyJson = await verifyRes.json();
+        if (!verifyJson.success) {
+          return NextResponse.json({ error: "reCAPTCHA verification failed. Please try again." }, { status: 400 });
+        }
+      } catch (err) {
+        console.error("[reCAPTCHA verification error]:", err);
+      }
+    }
+
     const phoneCheck = validateAndNormalizePhone(phone);
 
     // 4. Persist reservation to database
