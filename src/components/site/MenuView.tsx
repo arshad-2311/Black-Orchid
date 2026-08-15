@@ -13,8 +13,12 @@ import { cn } from "@/lib/utils";
 
 type Group = { category: MenuCategory; items: MenuItem[] };
 
+// In-memory module cache for instant 0ms navigation between tabs
+let cachedMenuCategories: MenuCategory[] | null = null;
+
 export function MenuView() {
-  const [categories, setCategories] = useState<MenuCategory[]>([]);
+  const [categories, setCategories] = useState<MenuCategory[]>(() => cachedMenuCategories || []);
+  const [loading, setLoading] = useState<boolean>(!cachedMenuCategories || cachedMenuCategories.length === 0);
   const [active, setActive] = useState<string>("ALL");
   const [query, setQuery] = useState("");
   const [vegOnly, setVegOnly] = useState(false);
@@ -44,7 +48,20 @@ export function MenuView() {
   }, [active]);
 
   useEffect(() => {
-    apiGet<MenuCategory[]>("/api/menu").then(setCategories).catch(() => {});
+    let alive = true;
+    apiGet<MenuCategory[]>("/api/menu")
+      .then((data) => {
+        if (!alive) return;
+        cachedMenuCategories = data;
+        setCategories(data);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const groups = useMemo<Group[]>(() => {
@@ -105,66 +122,95 @@ export function MenuView() {
         </div>
       </section>
 
-      {/* ============== STICKY CONTROLS — horizontal pill rail for all sizes ============== */}
-      <section className="sticky top-16 z-30 glass-cinema border-y border-white/[0.06]">
+      {/* ============== CATEGORY SELECTOR + SEARCH / FILTER BAR ============== */}
+      <section className="sticky top-20 z-30 border-y border-white/[0.08] bg-background/90 py-4 backdrop-blur-xl transition-all duration-300 sm:top-24 sm:py-5">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          {/* Category pills with left/right arrows — works on both mobile and desktop */}
-          <div className="flex items-center gap-1.5 py-3 lg:py-4">
+          {/* Horizontal scrollable category rail with scroll arrow indicators */}
+          <div className="relative mb-4 flex items-center">
             <button
-              type="button"
               onClick={() => scrollCategory("left")}
-              aria-label="Previous categories"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-card/80 text-foreground transition-all duration-200 hover:border-gold/50 hover:text-gold hover:bg-gold/10 active:scale-90"
+              aria-label="Scroll categories left"
+              className="absolute -left-3 z-10 hidden h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-background/90 text-gold shadow-lg backdrop-blur-md transition-all hover:bg-gold/10 md:flex"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
 
             <div
               ref={categoryScrollRef}
-              className="no-scrollbar flex flex-1 items-center gap-1 overflow-x-auto scroll-smooth px-1 py-1"
-              style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x" }}
+              className="no-scrollbar flex w-full items-center gap-2 overflow-x-auto px-1 py-1 touch-pan-x"
             >
-              <CategoryPill active={active === "ALL"} onClick={() => setActive("ALL")}>
-                All
-              </CategoryPill>
-              {categories.map((c) => (
-                <CategoryPill key={c.id} active={active === c.id} onClick={() => setActive(c.id)}>
-                  {c.name}
-                </CategoryPill>
-              ))}
+              {loading && categories.length === 0 ? (
+                <>
+                  <div className="h-10 w-20 shrink-0 rounded-full bg-white/10 animate-pulse" />
+                  <div className="h-10 w-28 shrink-0 rounded-full bg-white/5 animate-pulse" />
+                  <div className="h-10 w-32 shrink-0 rounded-full bg-white/5 animate-pulse" />
+                  <div className="h-10 w-24 shrink-0 rounded-full bg-white/5 animate-pulse" />
+                  <div className="h-10 w-28 shrink-0 rounded-full bg-white/5 animate-pulse" />
+                </>
+              ) : (
+                <>
+                  <CategoryPill
+                    active={active === "ALL"}
+                    onClick={(el) => {
+                      setActive("ALL");
+                      el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+                    }}
+                    count={categories.reduce((acc, c) => acc + c.items.length, 0)}
+                  >
+                    All
+                  </CategoryPill>
+                  {categories.map((c) => (
+                    <CategoryPill
+                      key={c.id}
+                      active={active === c.id}
+                      onClick={(el) => {
+                        setActive(c.id);
+                        el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+                      }}
+                      count={c.items.length}
+                    >
+                      {c.name}
+                    </CategoryPill>
+                  ))}
+                </>
+              )}
             </div>
 
             <button
-              type="button"
               onClick={() => scrollCategory("right")}
-              aria-label="Next categories"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-card/80 text-foreground transition-all duration-200 hover:border-gold/50 hover:text-gold hover:bg-gold/10 active:scale-90"
+              aria-label="Scroll categories right"
+              className="absolute -right-3 z-10 hidden h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-background/90 text-gold shadow-lg backdrop-blur-md transition-all hover:bg-gold/10 md:flex"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
 
-          {/* Search + veg filter row */}
-          <div className="flex items-center gap-3 border-t border-white/[0.04] py-3 lg:border-t-0 lg:py-0 lg:pb-4">
-            <div className="relative flex-1 lg:w-64 lg:flex-none">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          {/* Search + Veg toggle row */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+            <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <input
+                type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search dishes…"
-                className="h-11 w-full rounded-full border border-white/10 bg-card/60 pl-10 pr-9 text-base text-foreground placeholder:text-muted-foreground/60 transition-colors focus:border-gold/50 focus:outline-none lg:text-sm"
+                aria-label="Search dishes"
+                className="h-11 w-full rounded-full border border-white/10 bg-white/[0.03] pl-9 pr-8 font-sans text-xs text-foreground placeholder:text-muted-foreground/60 transition-colors focus:border-gold/50 focus:bg-white/[0.06] focus:outline-none"
               />
               {query && (
                 <button
+                  type="button"
                   onClick={() => setQuery("")}
                   aria-label="Clear search"
-                  className="absolute right-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center text-muted-foreground transition-colors hover:text-gold"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3 w-3" />
                 </button>
               )}
             </div>
+
             <button
+              type="button"
               onClick={() => setVegOnly((v) => !v)}
               aria-pressed={vegOnly}
               className={cn(
@@ -185,7 +231,9 @@ export function MenuView() {
         <div className="ambient-orb pointer-events-none absolute top-40 left-[-10%]" style={{ width: 360, height: 360, background: "rgba(212,175,55,0.04)" }} />
         <div className="relative mx-auto max-w-4xl px-4 sm:px-6">
           <AnimatePresence mode="popLayout">
-            {totalShown === 0 ? (
+            {loading && categories.length === 0 ? (
+              <MenuSkeleton key="loading-skeleton" />
+            ) : totalShown === 0 ? (
               <motion.div
                 key="empty"
                 initial={{ opacity: 0 }}
@@ -259,6 +307,37 @@ export function MenuView() {
   );
 }
 
+/* ============== LUXURY MENU SKELETON LOADER ============== */
+function MenuSkeleton() {
+  return (
+    <div className="space-y-16 animate-pulse">
+      {[1, 2].map((g) => (
+        <div key={g} className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="h-9 w-48 rounded-xl bg-white/10" />
+            <div className="h-px flex-1 bg-white/5" />
+            <div className="h-4 w-16 rounded bg-white/5" />
+          </div>
+          <div className="divide-y divide-white/5 rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:p-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center justify-between py-6 first:pt-2 last:pb-2">
+                <div className="flex items-center gap-4">
+                  <div className="h-16 w-16 shrink-0 rounded-xl bg-white/10" />
+                  <div className="space-y-2.5">
+                    <div className="h-5 w-48 rounded bg-white/10" />
+                    <div className="h-3.5 w-72 rounded bg-white/5" />
+                  </div>
+                </div>
+                <div className="h-6 w-16 rounded bg-white/10" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ============== DISH ROW — editorial, clickable to open showcase ============== */
 function DishRow({ item, categoryName, index, onOpen }: { item: MenuItem; categoryName: string; index: number; onOpen: () => void }) {
   const isCoarse = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
@@ -268,118 +347,89 @@ function DishRow({ item, categoryName, index, onOpen }: { item: MenuItem; catego
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: isCoarse ? 0.25 : 0.4, delay: isCoarse ? 0 : Math.min(index * 0.02, 0.15), ease: [0.22, 1, 0.36, 1] }}
       onClick={onOpen}
-      className="group relative flex w-full cursor-pointer gap-4 border-b border-white/[0.06] px-3 py-8 text-left transition-colors duration-300 hover:bg-white/[0.02] sm:gap-6 sm:px-4"
+      className="group relative flex w-full flex-col gap-3 py-6 text-left transition-colors sm:flex-row sm:items-start sm:justify-between sm:gap-6 border-b border-white/[0.06] last:border-b-0 hover:bg-white/[0.02] px-3 sm:px-4 rounded-xl -mx-3 sm:-mx-4"
     >
-      {/* Thumbnail */}
-      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-white/[0.06] sm:h-28 sm:w-28">
-        {item.image ? (
-          <img
-            src={item.image}
-            alt={item.name}
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-          />
-        ) : (
-          <div className="h-full w-full bg-gradient-to-br from-card to-secondary" />
-        )}
-        <div className="absolute left-1.5 top-1.5">
-          <VegBadge veg={item.veg} />
-        </div>
-        {item.chefRecommended && (
-          <div className="absolute bottom-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gold-gradient text-black shadow">
-            <Award className="h-3 w-3" />
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="flex min-w-0 flex-1 flex-col justify-center">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <h3 className="font-[family-name:var(--font-playfair)] text-xl font-semibold leading-tight text-foreground transition-colors group-hover:text-gold sm:text-2xl">
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="font-[family-name:var(--font-playfair)] text-xl font-medium tracking-wide text-foreground transition-colors group-hover:text-gold sm:text-2xl">
             {item.name}
-          </h3>
-          {item.featured && (
-            <span className="rounded-full border border-gold/40 bg-gold/[0.06] px-2.5 py-0.5 font-sans text-[9px] font-semibold uppercase tracking-[0.2em] text-gold">
-              Signature
-            </span>
-          )}
+          </span>
+          <VegBadge veg={item.veg} />
+          {item.spice > 0 && <SpiceLevel level={item.spice} />}
           {item.chefRecommended && (
-            <span className="rounded-full border border-gold/30 bg-gold/10 px-2.5 py-0.5 font-sans text-[9px] font-semibold uppercase tracking-[0.2em] text-gold">
-              Chef's Pick
-            </span>
-          )}
-          {item.winePairing && (
-            <span className="flex items-center gap-1 rounded-full border border-gold/40 bg-gold/15 px-2.5 py-0.5 font-sans text-[9px] font-semibold uppercase tracking-[0.2em] text-gold">
-              <Wine className="h-2.5 w-2.5" /> Wine Pair
-            </span>
-          )}
-          {!item.available && (
-            <span className="rounded-full border border-red-500/40 bg-red-500/[0.06] px-2.5 py-0.5 font-sans text-[9px] font-semibold uppercase tracking-[0.2em] text-red-400">
-              Sold out
+            <span className="inline-flex items-center gap-1 rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 font-sans text-[9px] uppercase tracking-[0.18em] text-gold">
+              <Award className="h-2.5 w-2.5" /> Chef&apos;s Pick
             </span>
           )}
         </div>
-        <p className="mt-1.5 line-clamp-2 font-[family-name:var(--font-cormorant)] text-base italic leading-snug text-muted-foreground sm:text-lg">
-          {item.shortDescription || item.description}
+
+        {item.tagline && (
+          <p className="mt-1 font-[family-name:var(--font-cormorant)] text-sm italic text-gold/80 sm:text-base">
+            {item.tagline}
+          </p>
+        )}
+
+        <p className="mt-1.5 font-sans text-xs leading-relaxed text-muted-foreground sm:text-sm">
+          {item.description}
         </p>
-        <div className="mt-2.5 flex items-center gap-3">
-          <span className="font-sans text-[10px] uppercase tracking-[0.25em] text-gold/60">{categoryName}</span>
-          <SpiceLevel level={item.spice} />
-        </div>
+
+        {/* Pairing note preview if present */}
+        {item.winePairing && (
+          <p className="mt-2 flex items-center gap-1.5 font-sans text-[11px] text-gold/75">
+            <Wine className="h-3 w-3 shrink-0" />
+            <span className="truncate">Pairing: {item.winePairing}</span>
+          </p>
+        )}
       </div>
 
-      {/* Price + view hint */}
-      <div className="flex shrink-0 flex-col items-end justify-center gap-1 pt-1 sm:items-center sm:flex-row sm:gap-3">
-        <span className="font-[family-name:var(--font-playfair)] text-xl font-semibold text-gold sm:text-2xl">
-          {item.variants && item.variants.length > 0 ? (
-            (() => {
-              const prices = item.variants.map((v) => v.price).filter((p) => typeof p === "number" && p > 0);
-              if (prices.length === 0) return item.price ? `₹${item.price}` : "";
-              const min = Math.min(...prices);
-              const max = Math.max(...prices);
-              return min === max ? `₹${min}` : `₹${min} – ₹${max}`;
-            })()
-          ) : item.price !== null && item.price !== undefined ? (
-            `₹${item.price}`
-          ) : (
-            ""
-          )}
+      <div className="flex items-center justify-between sm:flex-col sm:items-end sm:justify-start gap-1 shrink-0 pt-1">
+        <span className="font-[family-name:var(--font-cormorant)] text-2xl font-semibold italic text-gold-gradient sm:text-3xl">
+          {item.price !== null && item.price !== undefined ? `₹${item.price}` : "M.P."}
         </span>
-        <span className="hidden items-center gap-1 font-sans text-[10px] uppercase tracking-[0.2em] text-muted-foreground opacity-0 transition-opacity duration-300 group-hover:opacity-100 sm:flex">
-          View <ChevronRight className="h-3 w-3" />
+        <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-muted-foreground/60 group-hover:text-gold/80 transition-colors">
+          View details →
         </span>
       </div>
     </motion.button>
   );
 }
 
-/* ============== CATEGORY PILL — sliding gold indicator via layoutId ============== */
 function CategoryPill({
+  children,
   active,
   onClick,
-  children,
+  count,
 }: {
-  active: boolean;
-  onClick: () => void;
   children: React.ReactNode;
+  active: boolean;
+  onClick: (el: HTMLButtonElement | null) => void;
+  count?: number;
 }) {
+  const ref = useRef<HTMLButtonElement | null>(null);
   return (
     <button
-      onClick={onClick}
+      ref={ref}
+      type="button"
       data-active={active}
+      onClick={() => onClick(ref.current)}
       className={cn(
-        "relative flex min-h-[44px] items-center whitespace-nowrap rounded-full px-5 font-sans text-xs font-medium uppercase tracking-[0.2em] transition-colors duration-300",
-        active ? "text-black" : "text-muted-foreground hover:text-gold"
+        "relative shrink-0 rounded-full px-5 py-2.5 font-sans text-xs font-medium uppercase tracking-[0.2em] transition-all duration-300 min-h-[44px] flex items-center gap-2",
+        active
+          ? "bg-gold text-background shadow-[0_0_20px_rgba(212,175,55,0.4)]"
+          : "border border-white/10 text-muted-foreground hover:border-gold/40 hover:text-gold"
       )}
     >
-      {active && (
-        <motion.span
-          layoutId="menu-pill-bg"
-          className="absolute inset-0 rounded-full bg-gold-gradient"
-          transition={{ type: "spring", stiffness: 400, damping: 35 }}
-        />
+      <span>{children}</span>
+      {count !== undefined && (
+        <span
+          className={cn(
+            "rounded-full px-1.5 py-0.5 text-[9px] font-semibold tracking-normal transition-colors",
+            active ? "bg-black/30 text-white" : "bg-white/10 text-muted-foreground"
+          )}
+        >
+          {count}
+        </span>
       )}
-      <span className="relative z-10">{children}</span>
     </button>
   );
 }

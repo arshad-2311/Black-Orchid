@@ -12,14 +12,31 @@ import { cn } from "@/lib/utils";
 
 const CATEGORIES = ["All", "Food", "Drinks", "Interior", "Events", "Banquet"];
 
+// In-memory module cache for instant 0ms transitions
+let cachedGalleryImages: GalleryImage[] | null = null;
+
 export function GalleryView() {
-  const [images, setImages] = useState<GalleryImage[]>([]);
+  const [images, setImages] = useState<GalleryImage[]>(() => cachedGalleryImages || []);
+  const [loading, setLoading] = useState<boolean>(!cachedGalleryImages || cachedGalleryImages.length === 0);
   const [cat, setCat] = useState("All");
   const [visible, setVisible] = useState(12);
   const [lbIndex, setLbIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    apiGet<GalleryImage[]>("/api/gallery").then(setImages).catch(() => {});
+    let alive = true;
+    apiGet<GalleryImage[]>("/api/gallery")
+      .then((data) => {
+        if (!alive) return;
+        cachedGalleryImages = data;
+        setImages(data);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const filtered = useMemo(
@@ -91,7 +108,9 @@ export function GalleryView() {
       {/* ============== MASONRY GRID — CSS columns ============== */}
       <section className="pb-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          {shown.length === 0 ? (
+          {loading && images.length === 0 ? (
+            <GallerySkeleton />
+          ) : shown.length === 0 ? (
             <p className="py-32 text-center font-[family-name:var(--font-cormorant)] text-2xl italic text-muted-foreground sm:text-3xl">
               No images in this collection yet.
             </p>
@@ -138,23 +157,29 @@ export function GalleryView() {
             </AnimatePresence>
           )}
 
-          {visible < filtered.length && (
-            <div className="mt-16 flex justify-center">
-              <LuxuryButton variant="outline" onClick={() => setVisible((v) => v + 12)}>
-                Load More
+          {/* Load more button */}
+          {!loading && visible < filtered.length && (
+            <div className="mt-14 flex justify-center">
+              <LuxuryButton
+                variant="outline"
+                onClick={() => setVisible((v) => v + 12)}
+                className="min-h-[48px] px-8 text-xs uppercase tracking-[0.2em]"
+              >
+                Load More Moments ({filtered.length - visible} remaining)
               </LuxuryButton>
             </div>
           )}
         </div>
       </section>
 
-      {lbIndex !== null && filtered[lbIndex] && (
+      {/* Lightbox modal */}
+      {lbIndex !== null && shown[lbIndex] && (
         <Lightbox
-          images={filtered}
+          images={shown}
           index={lbIndex}
           onClose={() => setLbIndex(null)}
-          onNav={(d) =>
-            setLbIndex((p) => (p === null ? p : (p + d + filtered.length) % filtered.length))
+          onNav={(dir) =>
+            setLbIndex((p) => (p === null ? p : (p + dir + shown.length) % shown.length))
           }
         />
       )}
@@ -162,32 +187,43 @@ export function GalleryView() {
   );
 }
 
-/* ============== FILTER PILL — sliding gold indicator via layoutId ============== */
+/* ============== LUXURY GALLERY SKELETON ============== */
+function GallerySkeleton() {
+  const heights = [280, 200, 320, 240, 300, 220, 260, 310];
+  return (
+    <div className="columns-2 gap-4 sm:columns-3 lg:columns-4 animate-pulse">
+      {heights.map((h, i) => (
+        <div
+          key={i}
+          className="mb-4 rounded-2xl border border-white/5 bg-white/[0.03]"
+          style={{ height: `${h}px` }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function FilterPill({
+  children,
   active,
   onClick,
-  children,
 }: {
-  active: boolean;
-  onClick: (el: HTMLButtonElement) => void;
   children: React.ReactNode;
+  active: boolean;
+  onClick: (btnEl: HTMLButtonElement | null) => void;
 }) {
   return (
     <button
+      type="button"
       onClick={(e) => onClick(e.currentTarget)}
       className={cn(
-        "relative flex min-h-[44px] shrink-0 items-center whitespace-nowrap rounded-full px-5 font-sans text-xs font-medium uppercase tracking-[0.2em] transition-colors duration-300 active:scale-95",
-        active ? "text-black font-semibold" : "text-foreground/70 hover:text-gold"
+        "rounded-full px-5 py-2 font-sans text-xs font-medium uppercase tracking-[0.2em] transition-all duration-300 min-h-[44px]",
+        active
+          ? "bg-gold text-background shadow-[0_0_20px_rgba(212,175,55,0.4)]"
+          : "border border-white/10 text-muted-foreground hover:border-gold/40 hover:text-gold"
       )}
     >
-      {active && (
-        <motion.span
-          layoutId="gallery-pill-bg"
-          className="absolute inset-0 rounded-full bg-gold-gradient shadow-[0_0_12px_rgba(212,175,55,0.3)]"
-          transition={{ type: "spring", stiffness: 400, damping: 35 }}
-        />
-      )}
-      <span className="relative z-10">{children}</span>
+      {children}
     </button>
   );
 }
