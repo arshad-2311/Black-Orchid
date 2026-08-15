@@ -20,12 +20,10 @@ export function Home({ settings }: { settings: SiteSettings | null }) {
   const { setView } = useApp();
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [gallery, setGallery] = useState<GalleryImage[]>([]);
-  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
 
   useEffect(() => {
     apiGet<MenuCategory[]>("/api/menu").then(setCategories).catch(() => { });
     apiGet<GalleryImage[]>("/api/gallery").then(setGallery).catch(() => { });
-    apiGet<Testimonial[]>("/api/testimonials?featured=1").then(setTestimonials).catch(() => { });
   }, []);
 
   const featuredItems = useMemo(
@@ -42,8 +40,7 @@ export function Home({ settings }: { settings: SiteSettings | null }) {
       <GalleryPreview images={gallery} onViewAll={() => setView("gallery")} />
       <BanquetCinema settings={settings} onBook={() => setView("banquet")} />
       <CircularGallerySection gallery={gallery} />
-      <TestimonialCinema testimonials={testimonials} />
-      <GoogleReviews />
+      <LiveGoogleReviews />
       <ReservationCinema settings={settings} onReserve={() => setView("reservation")} />
     </div>
   );
@@ -557,98 +554,39 @@ function GalleryPreview({ images, onViewAll }: { images: GalleryImage[]; onViewA
   );
 }
 
-/* ============== TESTIMONIAL CINEMA — single dramatic quote ============== */
-function TestimonialCinema({ testimonials }: { testimonials: Testimonial[] }) {
-  const [idx, setIdx] = useState(0);
-  const list = testimonials;
+/* ============== LIVE GOOGLE REVIEWS (Jotform Widget) ============== */
+function LiveGoogleReviews() {
   useEffect(() => {
-    if (!list.length) return;
-    const t = setInterval(() => setIdx((i) => (i + 1) % list.length), 7000);
-    return () => clearInterval(t);
-  }, [list.length]);
-  if (!list.length) return null;
-  const t = list[idx];
+    const scriptId = "jotform-widget-script-01a003efac50700080c40ef2fdeed59c2026";
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null;
+    if (!script) {
+      script = document.createElement("script");
+      script.id = scriptId;
+      script.src = "https://www.jotform.com/website-widgets/embed/01a003efac50700080c40ef2fdeed59c2026";
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }, []);
 
   return (
-    <section className="relative overflow-hidden bg-[#080808] py-32 sm:py-44">
-      <div className="ambient-orb" style={{ width: 450, height: 450, background: "rgba(212,175,55,0.08)", top: "20%", left: "30%" }} />
-      <div className="mx-auto max-w-4xl px-6 text-center">
-        <Quote className="mx-auto h-12 w-12 text-gold/30" />
-        <div className="mt-8 min-h-[280px] sm:min-h-[240px]">
-          <AnimatePresence mode="wait">
-            <motion.figure key={t.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.6 }}>
-              <div className="flex justify-center gap-1">
-                {Array.from({ length: t.rating }).map((_, i) => <Star key={i} className="h-4 w-4 fill-gold text-gold" />)}
-              </div>
-              <blockquote className="mx-auto mt-6 max-w-3xl font-[family-name:var(--font-playfair)] text-2xl font-medium italic leading-[1.4] text-foreground sm:text-4xl sm:leading-[1.35]">
-                “{t.message}”
-              </blockquote>
-              <figcaption className="mt-8 flex items-center justify-center gap-3">
-                {t.photo && <img src={t.photo} alt={t.name} loading="lazy" decoding="async" className="h-12 w-12 rounded-full object-cover ring-2 ring-gold/40" />}
-                <div className="text-left">
-                  <p className="font-[family-name:var(--font-playfair)] text-lg text-foreground">{t.name}</p>
-                  <p className="font-sans text-[10px] uppercase tracking-[0.2em] text-gold/80">{t.role}</p>
-                </div>
-              </figcaption>
-            </motion.figure>
-          </AnimatePresence>
-        </div>
-        <div className="mt-10 flex justify-center gap-2">
-          {list.map((_, i) => (
-            <button key={i} onClick={() => setIdx(i)} className={cn("h-1.5 rounded-full transition-all duration-500", i === idx ? "w-10 bg-gold" : "w-1.5 bg-white/20")} aria-label={`Testimonial ${i + 1}`} />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ============== GOOGLE REVIEWS — trust-building social proof ============== */
-function GoogleReviews() {
-  const reviews = [
-    { name: "Alexandra R.", rating: 5, text: "The tasting menu was a journey. Each course more stunning than the last. Black Orchid has set a new standard.", time: "2 weeks ago" },
-    { name: "Jonathan P.", rating: 5, text: "Service was impeccable and the wagyu melted like butter. The ambience transports you.", time: "1 month ago" },
-    { name: "Mira S.", rating: 4, text: "Beautiful evening for our anniversary. The sommelier's pairing was inspired.", time: "1 month ago" },
-  ];
-  return (
-    <section className="border-y border-white/[0.06] bg-[#080808] py-24 sm:py-32">
+    <section className="relative border-y border-white/[0.06] bg-[#080808] py-24 sm:py-32 overflow-hidden">
+      <div className="ambient-orb" style={{ width: 450, height: 450, background: "rgba(212,175,55,0.06)", top: "15%", left: "25%" }} />
       <div className="mx-auto max-w-7xl px-6 sm:px-10">
-        <div className="grid gap-10 lg:grid-cols-[auto_1fr] lg:items-center lg:gap-16">
-          {/* Rating summary */}
-          <div className="text-center lg:text-left">
-            <Eyebrow className="mb-4 lg:justify-start">Google Reviews</Eyebrow>
-            <div className="flex items-center justify-center gap-4 lg:justify-start">
-              <span className="font-[family-name:var(--font-playfair)] text-6xl font-semibold text-gold-gradient sm:text-7xl">4.8</span>
-              <div>
-                <div className="flex gap-1" aria-label="4.8 out of 5 stars">
-                  {Array.from({ length: 5 }).map((_, i) => <Star key={i} className="h-5 w-5 fill-gold text-gold" />)}
-                </div>
-                <p className="mt-1 font-sans text-sm text-foreground/70">Based on 1,284 reviews</p>
-              </div>
-            </div>
-          </div>
-          {/* Review cards */}
-          <div className="grid gap-4 sm:grid-cols-3">
-            {reviews.map((r, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.6, delay: i * 0.1 }}
-                className="rounded-2xl border border-white/[0.06] bg-card p-6"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-0.5" aria-label={`${r.rating} out of 5 stars`}>
-                    {Array.from({ length: r.rating }).map((_, j) => <Star key={j} className="h-3.5 w-3.5 fill-gold text-gold" />)}
-                  </div>
-                  <span className="font-sans text-[10px] text-muted-foreground">{r.time}</span>
-                </div>
-                <p className="mt-3 font-[family-name:var(--font-cormorant)] text-base italic leading-relaxed text-foreground/80">“{r.text}”</p>
-                <p className="mt-3 font-sans text-sm font-medium text-foreground">{r.name}</p>
-              </motion.div>
-            ))}
-          </div>
+        <div className="mx-auto mb-12 max-w-2xl text-center">
+          <Eyebrow className="mb-4 justify-center">Google Reviews</Eyebrow>
+          <RevealText
+            text="Guest Experiences"
+            as="h2"
+            className="font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.05] tracking-luxe text-foreground sm:text-5xl"
+          />
+          <p className="mt-3 font-[family-name:var(--font-cormorant)] text-xl italic text-muted-foreground">
+            Read live reviews and ratings from our guests on Google.
+          </p>
+        </div>
+
+        {/* Live Jotform Google Reviews Widget */}
+        <div className="w-full flex justify-center min-h-[220px]">
+          <div id="JFWebsiteWidget-01a003efac50700080c40ef2fdeed59c2026" className="w-full" />
         </div>
       </div>
     </section>

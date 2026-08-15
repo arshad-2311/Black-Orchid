@@ -16,19 +16,17 @@ import { AdminOverview } from "./AdminOverview";
 import { AdminReservations } from "./AdminReservations";
 import { AdminMenu } from "./AdminMenu";
 import { AdminGallery } from "./AdminGallery";
-import { AdminTestimonials } from "./AdminTestimonials";
 import { AdminEvents } from "./AdminEvents";
 import { AdminCatering } from "./AdminCatering";
 import { AdminSettings } from "./AdminSettings";
 
-type Section = "overview" | "reservations" | "menu" | "gallery" | "testimonials" | "events" | "catering" | "settings";
+type Section = "overview" | "reservations" | "menu" | "gallery" | "events" | "catering" | "settings";
 
 const NAV: { key: Section; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "overview", label: "Overview", Icon: LayoutDashboard },
   { key: "reservations", label: "Reservations", Icon: CalendarCheck },
   { key: "menu", label: "Menu", Icon: UtensilsCrossed },
   { key: "gallery", label: "Gallery", Icon: Images },
-  { key: "testimonials", label: "Testimonials", Icon: Star },
   { key: "events", label: "Events", Icon: CalendarHeart },
   { key: "catering", label: "Catering", Icon: Package },
   { key: "settings", label: "Settings", Icon: Settings },
@@ -39,7 +37,6 @@ const SECTION_TITLES: Record<Section, string> = {
   reservations: "Reservations",
   menu: "Menu",
   gallery: "Gallery",
-  testimonials: "Testimonials",
   events: "Events",
   catering: "Catering",
   settings: "Settings",
@@ -200,7 +197,6 @@ export function AdminApp() {
                   {section === "reservations" && <AdminReservations />}
                   {section === "menu" && <AdminMenu />}
                   {section === "gallery" && <AdminGallery />}
-                  {section === "testimonials" && <AdminTestimonials />}
                   {section === "events" && <AdminEvents />}
                   {section === "catering" && <AdminCatering />}
                   {section === "settings" && <AdminSettings />}
