@@ -556,23 +556,57 @@ function GalleryPreview({ images, onViewAll }: { images: GalleryImage[]; onViewA
 
 /* ============== LIVE GOOGLE REVIEWS (Jotform Widget) ============== */
 function LiveGoogleReviews() {
+  const [iframeHeight, setIframeHeight] = useState(520);
+
   useEffect(() => {
-    const scriptId = "jotform-widget-script-01a003efac50700080c40ef2fdeed59c2026";
-    let script = document.getElementById(scriptId) as HTMLScriptElement | null;
-    if (!script) {
-      script = document.createElement("script");
-      script.id = scriptId;
-      script.src = "https://www.jotform.com/website-widgets/embed/01a003efac50700080c40ef2fdeed59c2026";
-      script.async = true;
-      document.body.appendChild(script);
-    }
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data && typeof e.data === "object" && e.data.type === "jf-widget-resize") {
+        if (e.data.height && Number(e.data.height) > 100) {
+          setIframeHeight(Math.max(400, Number(e.data.height)));
+        }
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
   }, []);
 
+  const embedHtml = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 8px;
+        background: transparent;
+        color: #f4efe5;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        overflow-x: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="JFWebsiteWidget-01a003efac50700080c40ef2fdeed59c2026"></div>
+    <script src="https://www.jotform.com/website-widgets/embed/01a003efac50700080c40ef2fdeed59c2026"></script>
+    <script>
+      const ro = new ResizeObserver(() => {
+        const h = document.body.scrollHeight;
+        if (h > 80) {
+          window.parent.postMessage({ type: 'jf-widget-resize', height: h + 24 }, '*');
+        }
+      });
+      ro.observe(document.body);
+    </script>
+  </body>
+</html>`;
+
   return (
-    <section className="relative border-y border-white/[0.06] bg-[#080808] py-24 sm:py-32 overflow-hidden">
+    <section className="relative border-y border-white/[0.06] bg-[#080808] py-20 sm:py-28 overflow-hidden">
       <div className="ambient-orb" style={{ width: 450, height: 450, background: "rgba(212,175,55,0.06)", top: "15%", left: "25%" }} />
-      <div className="mx-auto max-w-7xl px-6 sm:px-10">
-        <div className="mx-auto mb-12 max-w-2xl text-center">
+      <div className="mx-auto max-w-7xl px-4 sm:px-8">
+        <div className="mx-auto mb-10 max-w-2xl text-center">
           <Eyebrow className="mb-4 justify-center">Google Reviews</Eyebrow>
           <RevealText
             text="Guest Experiences"
@@ -580,13 +614,19 @@ function LiveGoogleReviews() {
             className="font-[family-name:var(--font-playfair)] text-4xl font-semibold leading-[1.05] tracking-luxe text-foreground sm:text-5xl"
           />
           <p className="mt-3 font-[family-name:var(--font-cormorant)] text-xl italic text-muted-foreground">
-            Read live reviews and ratings from our guests on Google.
+            Live reviews and ratings from our guests at Black Orchid, Anna Nagar.
           </p>
         </div>
 
         {/* Live Jotform Google Reviews Widget */}
-        <div className="w-full flex justify-center min-h-[220px]">
-          <div id="JFWebsiteWidget-01a003efac50700080c40ef2fdeed59c2026" className="w-full" />
+        <div className="w-full overflow-hidden rounded-2xl">
+          <iframe
+            srcDoc={embedHtml}
+            title="Google Reviews - Black Orchid"
+            className="w-full border-0 transition-all duration-300"
+            style={{ minHeight: `${iframeHeight}px`, height: `${iframeHeight}px` }}
+            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+          />
         </div>
       </div>
     </section>
