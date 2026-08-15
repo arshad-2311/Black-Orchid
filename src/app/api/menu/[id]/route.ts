@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin(req);
@@ -38,6 +42,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if ("allergens" in body) data.allergens = JSON.stringify(Array.isArray(body.allergens) ? body.allergens : []);
 
   const item = await db.menuItem.update({ where: { id }, data });
+
+  try {
+    revalidatePath("/api/menu");
+    revalidatePath("/menu");
+    revalidatePath("/");
+  } catch {}
+
   return NextResponse.json(item);
 }
 
@@ -46,5 +57,12 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   await db.menuItem.delete({ where: { id } });
-  return NextResponse.json({ ok: true });
+
+  try {
+    revalidatePath("/api/menu");
+    revalidatePath("/menu");
+    revalidatePath("/");
+  } catch {}
+
+  return NextResponse.json({ ok: true, deletedId: id });
 }

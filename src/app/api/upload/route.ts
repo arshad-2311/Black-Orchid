@@ -6,6 +6,9 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { createClient } from "@supabase/supabase-js";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
 
 // Allowed image MIME types
@@ -30,7 +33,10 @@ export async function POST(req: Request) {
     // 1. Authenticate admin
     const admin = await requireAdmin(req);
     if (!admin) {
-      return NextResponse.json({ error: "Unauthorized access: Please log in to admin panel again." }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized access: Please log in to admin panel again." },
+        { status: 401 }
+      );
     }
 
     // 2. Extract multipart form data
@@ -69,13 +75,19 @@ export async function POST(req: Request) {
 
     const filename = `${randomUUID()}.webp`;
 
-    // 6. If Supabase Storage is configured, upload to Supabase bucket
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    // 6. Supabase Storage Upload (Primary Cloud CDN)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+      process.env.SUPABASE_KEY;
 
     if (supabaseUrl && supabaseKey) {
       try {
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        const supabase = createClient(supabaseUrl, supabaseKey, {
+          auth: { persistSession: false },
+        });
         const bucket = "restaurant-assets";
 
         const { error: uploadError } = await supabase.storage
@@ -92,14 +104,14 @@ export async function POST(req: Request) {
             return NextResponse.json({ url: publicData.publicUrl }, { status: 201 });
           }
         } else {
-          console.warn("Supabase bucket upload notice:", uploadError.message);
+          console.warn("[Upload] Supabase bucket notice:", uploadError.message);
         }
       } catch (sbErr) {
-        console.warn("Supabase storage client exception:", sbErr);
+        console.warn("[Upload] Supabase client exception:", sbErr);
       }
     }
 
-    // 7. Fallback: save to local public/uploads directory
+    // 7. Local Filesystem fallback (Development / self-hosted)
     try {
       await fs.mkdir(UPLOAD_DIR, { recursive: true });
       const filePath = path.join(UPLOAD_DIR, filename);
@@ -107,11 +119,11 @@ export async function POST(req: Request) {
       const url = `/uploads/${filename}`;
       return NextResponse.json({ url }, { status: 201 });
     } catch (fsErr) {
-      console.error("Local disk upload write error:", fsErr);
-      return NextResponse.json(
-        { error: "Failed to store image on disk" },
-        { status: 500 }
-      );
+      // 8. Serverless Fallback: If disk is read-only (Vercel Lambda), return optimized Base64 data URI
+      console.log("[Upload] Disk is read-only on serverless. Using optimized Data URI fallback.");
+      const base64Data = processedBuffer.toString("base64");
+      const dataUri = `data:image/webp;base64,${base64Data}`;
+      return NextResponse.json({ url: dataUri }, { status: 201 });
     }
   } catch (error) {
     console.error("Image upload error:", error);
