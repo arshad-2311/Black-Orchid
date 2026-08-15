@@ -107,12 +107,7 @@ export function Footer({ settings }: { settings: SiteSettings | null }) {
               <li className="flex gap-3"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><span>{settings?.address}</span></li>
               <li className="flex gap-3">
                 <Phone className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" />
-                <div className="flex flex-col">
-                  <a href={`tel:${(settings?.phone || "+919585018502").replace(/\s+/g, "")}`} className="hover:text-gold transition-colors">{settings?.phone || "+91 95850 18502"}</a>
-                  {settings?.phoneSecondary && (
-                    <a href={`tel:${settings.phoneSecondary.replace(/\s+/g, "")}`} className="text-xs text-muted-foreground/70 hover:text-gold transition-colors">{settings.phoneSecondary}</a>
-                  )}
-                </div>
+                <a href={`tel:${(settings?.phone || "+919585018502").replace(/\s+/g, "")}`} className="hover:text-gold transition-colors">{settings?.phone || "+91 95850 18502"}</a>
               </li>
               <li className="flex gap-3"><Mail className="mt-0.5 h-4 w-4 shrink-0 text-gold/60" /><a href={`mailto:${settings?.email || "boan.reservations@gmail.com"}`} className="hover:text-gold transition-colors">{settings?.email || "boan.reservations@gmail.com"}</a></li>
             </ul>

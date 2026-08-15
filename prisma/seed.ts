@@ -31,7 +31,7 @@ async function main() {
     where: { id: "singleton" },
     update: {
       phone: "+91 95850 18502",
-      phoneSecondary: "+91 91764 77647",
+      phoneSecondary: null,
       email: "boan.reservations@gmail.com",
       address: "G Block, L33, 1st Avenue, R.V. Nagar, Brindhavan Colony, VOC Nagar, Anna Nagar East, Chennai, Tamil Nadu – 600102",
       mapEmbed: "https://maps.google.com/?q=Black+Orchid+Anna+Nagar+East+Chennai",
@@ -52,7 +52,7 @@ async function main() {
       aboutBody:
         "Black Orchid is a stylish restobar located in Anna Nagar East, Chennai, created for those who appreciate great food, crafted cocktails, music, and vibrant celebrations. From relaxing evenings with friends to grand events, every detail is designed for an unforgettable dining experience.",
       phone: "+91 95850 18502",
-      phoneSecondary: "+91 91764 77647",
+      phoneSecondary: null,
       email: "boan.reservations@gmail.com",
       address: "G Block, L33, 1st Avenue, R.V. Nagar, Brindhavan Colony, VOC Nagar, Anna Nagar East, Chennai, Tamil Nadu – 600102",
       mapEmbed: "https://maps.google.com/?q=Black+Orchid+Anna+Nagar+East+Chennai",

@@ -26,24 +26,14 @@ export function ContactView({ settings }: { settings: SiteSettings | null }) {
     },
     {
       Icon: Phone,
-      label: settings?.phoneSecondary ? "Phone Contacts" : "Phone",
+      label: "Phone",
       content: (
-        <div className="mt-1 flex flex-wrap items-center justify-center gap-x-6 gap-y-1">
-          <a
-            href={`tel:${(settings?.phone || "+919585018502").replace(/\s+/g, "")}`}
-            className="font-[family-name:var(--font-cormorant)] text-2xl text-foreground transition-colors hover:text-gold sm:text-3xl"
-          >
-            {settings?.phone || "+91 95850 18502"}
-          </a>
-          {settings?.phoneSecondary && (
-            <a
-              href={`tel:${settings.phoneSecondary.replace(/\s+/g, "")}`}
-              className="font-[family-name:var(--font-cormorant)] text-2xl text-foreground transition-colors hover:text-gold sm:text-3xl"
-            >
-              {settings.phoneSecondary}
-            </a>
-          )}
-        </div>
+        <a
+          href={`tel:${(settings?.phone || "+919585018502").replace(/\s+/g, "")}`}
+          className="mt-1 block font-[family-name:var(--font-cormorant)] text-2xl text-foreground transition-colors hover:text-gold sm:text-3xl"
+        >
+          {settings?.phone || "+91 95850 18502"}
+        </a>
       ),
     },
     {
