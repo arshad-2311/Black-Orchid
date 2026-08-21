@@ -3,6 +3,10 @@ import type { Reservation } from "./types";
 import { validateAndNormalizePhone } from "./phone";
 import { sendEmailViaResend } from "./providers/resend";
 import { sendSmsViaTwilio } from "./providers/twilio";
+import {
+  renderCustomerReservationEmail,
+  renderManagerAlertEmail,
+} from "./email-templates";
 
 /**
  * State-Machine Claim Guard for Notifications
@@ -10,7 +14,7 @@ import { sendSmsViaTwilio } from "./providers/twilio";
  */
 async function claimNotificationAttempt(
   reservationId: string,
-  notificationType: "EMAIL" | "SMS",
+  notificationType: "EMAIL_CUSTOMER" | "EMAIL_MANAGER" | "EMAIL" | "SMS",
   recipient: string
 ): Promise<{ proceed: boolean; logId?: string; status?: string }> {
   try {
@@ -123,19 +127,18 @@ async function finalizeNotification(
 }
 
 /**
- * Send Email Notification to Restaurant Manager via Resend
+ * Send VIP Black & Gold Digital Dining Pass Email to Customer
  */
-export async function sendManagerEmailNotification(
+export async function sendCustomerEmailNotification(
   reservation: Reservation,
-  managerEmail: string,
-  origin: string = ""
+  origin: string = "https://black-orchid-lime.vercel.app"
 ): Promise<"SENT" | "FAILED" | "SKIPPED"> {
-  if (!managerEmail) {
-    console.error("[Manager Email Error] No manager recipient email address configured.");
-    return "FAILED";
+  if (!reservation.email || !reservation.email.includes("@")) {
+    console.log(`[Customer Email Skipped] Invalid customer email: ${reservation.email}`);
+    return "SKIPPED";
   }
 
-  const claim = await claimNotificationAttempt(reservation.id, "EMAIL", managerEmail);
+  const claim = await claimNotificationAttempt(reservation.id, "EMAIL_CUSTOMER", reservation.email);
 
   if (!claim.proceed || !claim.logId) {
     return claim.status === "SENT" ? "SENT" : "SKIPPED";
@@ -147,67 +150,63 @@ export async function sendManagerEmailNotification(
   let errorMsg: string | undefined = undefined;
 
   try {
-    const subject = "New Reservation — Black Orchid";
-    const plainText = [
-      `Black Orchid — New Reservation`,
-      ``,
-      `Reservation ID:`,
-      `${reservation.id}`,
-      ``,
-      `Customer:`,
-      `${reservation.name}`,
-      ``,
-      `Phone:`,
-      `${reservation.phone}`,
-      ``,
-      `Email:`,
-      `${reservation.email}`,
-      ``,
-      `Date:`,
-      `${reservation.date}`,
-      ``,
-      `Time:`,
-      `${reservation.time}`,
-      ``,
-      `Guests:`,
-      `${reservation.guests}`,
-      ``,
-      `Kids:`,
-      `${reservation.kids || 0}`,
-      ``,
-      `Special Requests:`,
-      `${reservation.special || "None"}`,
-      ``,
-      `Status:`,
-      `${reservation.status}`,
-    ].join("\n");
+    const { html, text, subject } = renderCustomerReservationEmail(reservation, origin);
 
-    const htmlContent = `
-      <div style="font-family: Arial, sans-serif; background-color: #0A0A0A; color: #F8FAFC; padding: 28px; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #333;">
-        <h2 style="color: #D4AF37; margin-bottom: 20px; font-size: 22px; text-transform: uppercase;">Black Orchid — New Reservation</h2>
-        
-        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #141414; border: 1px solid #262626; border-radius: 8px; overflow: hidden;">
-          <tbody>
-            <tr style="border-bottom: 1px solid #262626;"><td style="padding: 12px; color: #94A3B8; width: 140px; font-size: 13px;">Reservation ID:</td><td style="padding: 12px; color: #D4AF37; font-weight: bold; font-family: monospace; font-size: 14px;">${reservation.id}</td></tr>
-            <tr style="border-bottom: 1px solid #262626;"><td style="padding: 12px; color: #94A3B8; font-size: 13px;">Customer:</td><td style="padding: 12px; color: #F8FAFC; font-weight: bold; font-size: 14px;">${reservation.name}</td></tr>
-            <tr style="border-bottom: 1px solid #262626;"><td style="padding: 12px; color: #94A3B8; font-size: 13px;">Phone:</td><td style="padding: 12px; color: #F8FAFC;"><a href="tel:${reservation.phone}" style="color: #60A5FA; text-decoration: none;">${reservation.phone}</a></td></tr>
-            <tr style="border-bottom: 1px solid #262626;"><td style="padding: 12px; color: #94A3B8; font-size: 13px;">Email:</td><td style="padding: 12px; color: #F8FAFC;"><a href="mailto:${reservation.email}" style="color: #60A5FA; text-decoration: none;">${reservation.email}</a></td></tr>
-            <tr style="border-bottom: 1px solid #262626;"><td style="padding: 12px; color: #94A3B8; font-size: 13px;">Date:</td><td style="padding: 12px; color: #F8FAFC; font-weight: bold; font-size: 14px;">${reservation.date}</td></tr>
-            <tr style="border-bottom: 1px solid #262626;"><td style="padding: 12px; color: #94A3B8; font-size: 13px;">Time:</td><td style="padding: 12px; color: #F8FAFC; font-weight: bold; font-size: 14px;">${reservation.time}</td></tr>
-            <tr style="border-bottom: 1px solid #262626;"><td style="padding: 12px; color: #94A3B8; font-size: 13px;">Guests:</td><td style="padding: 12px; color: #F8FAFC; font-size: 14px;">${reservation.guests}</td></tr>
-            <tr style="border-bottom: 1px solid #262626;"><td style="padding: 12px; color: #94A3B8; font-size: 13px;">Kids:</td><td style="padding: 12px; color: #F8FAFC; font-size: 14px;">${reservation.kids || 0}</td></tr>
-            <tr style="border-bottom: 1px solid #262626;"><td style="padding: 12px; color: #94A3B8; font-size: 13px;">Special Requests:</td><td style="padding: 12px; color: #F59E0B; font-size: 14px;">${reservation.special || "None"}</td></tr>
-            <tr><td style="padding: 12px; color: #94A3B8; font-size: 13px;">Status:</td><td style="padding: 12px; color: #34D399; font-weight: bold; font-size: 14px;">${reservation.status}</td></tr>
-          </tbody>
-        </table>
-      </div>
-    `;
+    const resendResult = await sendEmailViaResend({
+      to: reservation.email,
+      subject,
+      html,
+      text,
+    });
+
+    success = resendResult.success;
+    errorMsg = resendResult.error;
+    if (resendResult.messageId) {
+      providerUsed = `RESEND (${resendResult.messageId})`;
+    }
+  } catch (err: any) {
+    success = false;
+    errorMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[Customer Email Exception]`, err);
+  } finally {
+    await finalizeNotification(logId, success, providerUsed, errorMsg);
+  }
+
+  return success ? "SENT" : "FAILED";
+}
+
+/**
+ * Send Executive Email Notification to Restaurant Manager via Resend
+ */
+export async function sendManagerEmailNotification(
+  reservation: Reservation,
+  managerEmail: string,
+  origin: string = "https://black-orchid-lime.vercel.app"
+): Promise<"SENT" | "FAILED" | "SKIPPED"> {
+  if (!managerEmail) {
+    console.error("[Manager Email Error] No manager recipient email address configured.");
+    return "FAILED";
+  }
+
+  const claim = await claimNotificationAttempt(reservation.id, "EMAIL_MANAGER", managerEmail);
+
+  if (!claim.proceed || !claim.logId) {
+    return claim.status === "SENT" ? "SENT" : "SKIPPED";
+  }
+
+  const logId = claim.logId;
+  let success = false;
+  let providerUsed = "RESEND";
+  let errorMsg: string | undefined = undefined;
+
+  try {
+    const { html, text, subject } = renderManagerAlertEmail(reservation, origin);
 
     const resendResult = await sendEmailViaResend({
       to: managerEmail,
       subject,
-      html: htmlContent,
-      text: plainText,
+      html,
+      text,
     });
 
     success = resendResult.success;
@@ -276,36 +275,42 @@ export async function sendCustomerSmsNotification(
 }
 
 /**
- * Master Dispatcher: Evaluates Manager Email priority & triggers Resend + Twilio
+ * Master Dispatcher: Evaluates notifications & triggers Customer Email, Manager Email + Twilio SMS
  */
 export async function dispatchReservationNotifications(
   reservation: Reservation,
-  origin: string = ""
-): Promise<{ email: "SENT" | "FAILED" | "DISABLED" | "SKIPPED"; sms: "SENT" | "FAILED" | "DISABLED" | "SKIPPED" }> {
+  origin: string = "https://black-orchid-lime.vercel.app"
+): Promise<{
+  email: "SENT" | "FAILED" | "DISABLED" | "SKIPPED";
+  customerEmail: "SENT" | "FAILED" | "DISABLED" | "SKIPPED";
+  sms: "SENT" | "FAILED" | "DISABLED" | "SKIPPED";
+}> {
   try {
     const settings = await db.siteSettings.findUnique({ where: { id: "singleton" } });
     const notificationsEnabled = settings?.notificationsEnabled ?? true;
 
     if (!notificationsEnabled) {
       console.log(`[Notification Engine] Notifications disabled in Admin Settings.`);
-      return { email: "DISABLED", sms: "DISABLED" };
+      return { email: "DISABLED", customerEmail: "DISABLED", sms: "DISABLED" };
     }
 
     // Manager Email resolution priority: 1. managerEmail, 2. email, 3. process.env.MANAGER_EMAIL
     const managerEmail = settings?.managerEmail || settings?.email || process.env.MANAGER_EMAIL || "";
     const smsSenderName = settings?.smsSenderName || "Black Orchid Anna Nagar";
 
-    const [emailRes, smsRes] = await Promise.allSettled([
+    const [managerEmailRes, customerEmailRes, smsRes] = await Promise.allSettled([
       sendManagerEmailNotification(reservation, managerEmail, origin),
+      sendCustomerEmailNotification(reservation, origin),
       sendCustomerSmsNotification(reservation, smsSenderName),
     ]);
 
-    const emailStatus = emailRes.status === "fulfilled" ? emailRes.value : "FAILED";
+    const emailStatus = managerEmailRes.status === "fulfilled" ? managerEmailRes.value : "FAILED";
+    const customerEmailStatus = customerEmailRes.status === "fulfilled" ? customerEmailRes.value : "FAILED";
     const smsStatus = smsRes.status === "fulfilled" ? smsRes.value : "FAILED";
 
-    return { email: emailStatus, sms: smsStatus };
+    return { email: emailStatus, customerEmail: customerEmailStatus, sms: smsStatus };
   } catch (err) {
     console.error("[Notification Engine Fatal Error]", err);
-    return { email: "FAILED", sms: "FAILED" };
+    return { email: "FAILED", customerEmail: "FAILED", sms: "FAILED" };
   }
 }
